@@ -161,10 +161,30 @@ export function detectLanguage(input: string, fallback: "en" | "ms" = "en"): "en
   return malay > 0 && tokens.length < 3 ? "ms" : fallback;
 }
 
-/** Candidate model-number tokens in free text, such as "RT-AX86U" or "X1 Carbon". */
+const MODEL_SUFFIXES = new Set(["pro", "plus", "max", "ultra", "mini", "lite", "air", "se", "x", "s", "e", "gen", "v1", "v2", "v3", "2", "3", "4", "5"]);
+
+/**
+ * Candidate model-number tokens in free text, such as "RT-AX86U" or "X1 Carbon". When a token is
+ * followed by a variant word ("Pro", "Plus", "Max"...) the combined form is also returned, so a
+ * question about the Pro model is never resolved to the base model.
+ */
 export function extractModelCandidates(input: string): string[] {
-  const matches = input.match(/\b[A-Za-z]{1,6}[- ]?[A-Za-z]*\d{1,5}[A-Za-z0-9-]*\b/g) ?? [];
-  return [...new Set(matches.map(normalizeModelNumber).filter((m) => m.length >= 3))];
+  const out: string[] = [];
+  const re = /\b[A-Za-z]{1,6}[- ]?[A-Za-z]*\d{1,5}[A-Za-z0-9-]*\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(input))) {
+    const base = normalizeModelNumber(m[0]);
+    if (base.length < 3) continue;
+    const rest = input.slice(m.index + m[0].length).match(/^[\s-]+([A-Za-z0-9]{1,5})\b(?:[\s-]+([A-Za-z0-9]{1,5})\b)?/);
+    const s1 = rest?.[1]?.toLowerCase();
+    const s2 = rest?.[2]?.toLowerCase();
+    if (s1 && MODEL_SUFFIXES.has(s1)) {
+      if (s2 && MODEL_SUFFIXES.has(s2)) out.push(normalizeModelNumber(`${base}${s1}${s2}`));
+      out.push(normalizeModelNumber(`${base}${s1}`));
+    }
+    out.push(base);
+  }
+  return [...new Set(out)];
 }
 
 const STOP_WORDS = new Set([

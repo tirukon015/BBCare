@@ -82,6 +82,10 @@ d("database integration (real Postgres)", () => {
   it("resolves models exactly, by alias and flags ambiguity", async () => {
     expect(classifyResolution(await resolveModels(sql, "my NB-AX3000 is slow"))).toBe("resolved");
     expect((await resolveModels(sql, "AX3000 Pro"))[0]?.slug).toBe("nb-ax3000-pro");
+    // Regression: a variant suffix in a longer sentence must not resolve to the base model.
+    const pro = await resolveModels(sql, "NB-AX3000 Pro wifi slow in some rooms");
+    expect(pro[0]?.slug).toBe("nb-ax3000-pro");
+    expect(classifyResolution(pro)).toBe("resolved");
     expect(classifyResolution(await resolveModels(sql, "kestrel"))).toBe("ambiguous");
     expect(await resolveModels(sql, "hello there")).toEqual([]);
   });

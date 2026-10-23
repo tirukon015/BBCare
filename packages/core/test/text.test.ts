@@ -36,6 +36,8 @@ describe("text normalization", () => {
   it("extracts model candidates", () => {
     expect(extractModelCandidates("My RT-AX86U keeps rebooting")).toContain("RTAX86U");
     expect(extractModelCandidates("archer c6 wifi")).toContain("ARCHERC6");
+    expect(extractModelCandidates("NB-AX3000 Pro wifi slow")).toEqual(["NBAX3000PRO", "NBAX3000"]);
+    expect(extractModelCandidates("NB-AX3000 wifi slow")).toEqual(["NBAX3000"]);
   });
 });
 
