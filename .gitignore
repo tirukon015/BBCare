@@ -21,3 +21,4 @@ __pycache__/
 /data/private/
 /storage/
 *.log
+packages/db/.seed-credentials.txt

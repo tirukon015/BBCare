@@ -6,7 +6,7 @@ Each significant decision has a numbered record. Status values: Proposed, Accept
 |---|---|---|
 | [0001](0001-modular-monolith.md) | Modular monolith with Next.js and a worker | Accepted |
 | [0002](0002-postgresql-search-and-vectors.md) | PostgreSQL for data, full-text search, and vectors | Accepted |
-| [0003](0003-drizzle-orm.md) | Drizzle ORM with reviewed SQL migrations | Accepted |
+| [0003](0003-sql-first-data-access.md) | SQL-first data access with postgres.js (supersedes Drizzle) | Accepted |
 | [0004](0004-staff-authentication.md) | Self-hosted staff authentication with mandatory TOTP | Accepted |
 | [0005](0005-local-ai-provider-interface.md) | Local AI through a provider interface to the existing Flask service | Accepted |
 | [0006](0006-first-party-analytics.md) | First-party analytics, third-party tools off by default | Accepted |

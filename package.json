@@ -1,0 +1,24 @@
+{
+  "name": "bbcare",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm --filter @bbcare/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @bbcare/web test:e2e",
+    "db:migrate": "pnpm --filter @bbcare/db migrate",
+    "db:seed": "pnpm --filter @bbcare/db seed",
+    "db:reset": "pnpm --filter @bbcare/db reset",
+    "worker": "pnpm --filter @bbcare/worker start",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "3.9.10",
+    "typescript": "5.9.3"
+  }
+}

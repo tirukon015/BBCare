@@ -9,7 +9,7 @@ A modular monolith: one Next.js (TypeScript) application serving the customer si
 Internet -> [edge: Cloudflare Tunnel or Nginx, TLS, limits]
               |
         +-----+----------------------------- BBCare host --------------------------+
-        | web (Next.js)                            worker (Node, pg-boss)          |
+        | web (Next.js)                            worker (Node, ops.jobs queue)          |
         |  customer UI en/ms, admin UI (RBAC+MFA)   ingest, chunk, embed, rollups  |
         |  route handlers, server actions           link checks, retention, evals  |
         |            \__________ PostgreSQL (private) __________/                   |
@@ -41,7 +41,7 @@ Single team, single database, modest traffic. Separate processes exist only wher
 Rules: UI and routes call module services; only a module touches its own tables; `ai` receives evidence only from `search`, which returns published content only.
 
 ## 4. Data
-PostgreSQL 16+ with `pg_trgm`, `unaccent`, and `pgvector` (when available). Drizzle ORM with reviewed SQL migrations. UUID keys, `timestamptz`, explicit foreign-key delete rules. Database roles: owner (migrations), app (data only, insert-only on audit), reporting (aggregates only). See `docs/architecture/erd.md`.
+PostgreSQL 16+ with `pg_trgm`, `unaccent`, and `pgvector` (when available). postgres.js with reviewed SQL migrations (ADR 0003). UUID keys, `timestamptz`, explicit foreign-key delete rules. Database roles: owner (migrations), app (data only, insert-only on audit), reporting (aggregates only). See `docs/architecture/erd.md`.
 
 ## 5. Search and AI
 1. Normalize input (spelling, colloquial Malay, model numbers).

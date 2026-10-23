@@ -1,0 +1,17 @@
+{
+  "name": "@bbcare/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./*": "./src/*.ts" },
+  "scripts": {
+    "migrate": "tsx src/cli.ts migrate",
+    "seed": "tsx src/cli.ts seed",
+    "reset": "tsx src/cli.ts reset",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": { "@bbcare/core": "workspace:*", "postgres": "3.4.9" },
+  "devDependencies": { "tsx": "4.23.15", "vitest": "4.1.12", "@types/node": "22.20.5", "typescript": "5.9.3" }
+}
