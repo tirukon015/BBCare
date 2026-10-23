@@ -4,3 +4,4 @@ export * from "./client";
 export * from "./repos/indexing";
 export * from "./repos/search";
 export * from "./repos/analytics";
+export * from "./repos/imports";

@@ -81,3 +81,30 @@ test.describe("staff administration", () => {
     await expect(page.getByText("auth.mfa_enrolled").first()).toBeVisible();
   });
 });
+
+test.describe("historical import (synthetic export)", () => {
+  test("stages, scrubs, and promotes to an unverified source", async ({ page }, info) => {
+    test.skip(info.project.name !== "desktop-chrome", "desktop only");
+    const exportJson = [
+      { id: "synthetic-1", title: "Router keeps dropping", create_time: 1700000000, current_node: "b", mapping: {
+        a: { id: "a", parent: null, message: { author: { role: "user" }, content: { content_type: "text", parts: ["My router NB-AX3000 drops wifi at night. Email me test@example.com"] } } },
+        b: { id: "b", parent: "a", message: { author: { role: "assistant" }, content: { content_type: "text", parts: ["Try changing the wifi channel."] } } } } },
+      { id: "synthetic-2", title: "Holiday plans", current_node: "x", mapping: { x: { id: "x", parent: null, message: { author: { role: "user" }, content: { content_type: "text", parts: ["Where to go in Penang?"] } } } } },
+    ];
+    await staffLogin(page, "admin@bbcare.test");
+    await page.goto("/admin/imports");
+    await page.locator('input[name="file"]').setInputFiles({ name: "conversations.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(exportJson)) });
+    await page.getByLabel(/owner has authorised/).check();
+    await page.getByRole("button", { name: "Stage import" }).click();
+    await expect(page).toHaveURL(/\/admin\/imports\/[0-9a-f-]{36}/);
+    await expect(page.getByText("Router keeps dropping")).toBeVisible();
+    await page.getByText("Show conversation").click();
+    await expect(page.getByText("[email]")).toBeVisible();
+    await expect(page.getByText("test@example.com")).toHaveCount(0);
+    await page.getByRole("button", { name: "Promote to unverified source" }).click();
+    await page.goto("/admin/knowledge/sources");
+    const row = page.getByRole("row").filter({ hasText: "Historical chat: Router keeps dropping" });
+    await expect(row).toContainText("pending");
+    await expect(row).toContainText("unverified");
+  });
+});
