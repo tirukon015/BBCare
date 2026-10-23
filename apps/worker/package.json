@@ -1,0 +1,15 @@
+{
+  "name": "@bbcare/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "once": "tsx src/index.ts --once",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": { "@bbcare/ai": "workspace:*", "@bbcare/core": "workspace:*", "@bbcare/db": "workspace:*", "tsx": "4.23.15" },
+  "devDependencies": { "@types/node": "22.20.5", "typescript": "5.9.3", "vitest": "4.1.12" }
+}

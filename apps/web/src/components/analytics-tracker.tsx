@@ -9,7 +9,7 @@ import { flushOnExit, sessionId, track } from "@/lib/client/analytics";
 export function AnalyticsTracker() {
   const pathname = usePathname();
   const maxScroll = useRef(0);
-  const enteredAt = useRef(Date.now());
+  const enteredAt = useRef(0);
   const first = useRef(true);
 
   useReportWebVitals((metric) => {

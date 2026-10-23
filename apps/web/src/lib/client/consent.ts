@@ -32,3 +32,13 @@ export async function saveConsent(analytics: boolean): Promise<void> {
   } catch {}
   window.dispatchEvent(new CustomEvent("bbcare:consent", { detail: choice }));
 }
+
+/** Subscribe to consent changes (same tab via custom event, other tabs via focus). */
+export function subscribeConsent(onChange: () => void): () => void {
+  window.addEventListener("bbcare:consent", onChange);
+  window.addEventListener("focus", onChange);
+  return () => {
+    window.removeEventListener("bbcare:consent", onChange);
+    window.removeEventListener("focus", onChange);
+  };
+}

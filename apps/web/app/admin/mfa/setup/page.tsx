@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { beginTotpEnrollment, confirmTotpEnrollment, currentStaff } from "@/modules/identity/service";
@@ -35,7 +36,7 @@ export default async function MfaSetupPage({ searchParams }: { searchParams: Pro
             <ul className="mt-4 grid grid-cols-2 gap-2 rounded-lg border border-line bg-white p-4 font-mono text-sm">{codes.map((c) => <li key={c}>{c}</li>)}</ul>
           </>
         ) : null}
-        <a href="/admin" className={`${adminButton} mt-6`}>Continue to admin</a>
+        <Link href="/admin" className={`${adminButton} mt-6`}>Continue to admin</Link>
       </main>
     );
   }

@@ -56,3 +56,18 @@ test.describe("security controls", () => {
     expect(Object.keys(await ready.json())).toEqual(["status", "migrations"]);
   });
 });
+
+test.describe("rate limiting", () => {
+  test.beforeEach(({}, info) => {
+    test.skip(info.project.name !== "desktop-chrome", "once");
+  });
+  test("support session creation is rate limited per client", async ({ request }) => {
+    // The e2e server scales limits by 50, so the session bucket holds 500 tokens for this client IP.
+    let limited = false;
+    for (let i = 0; i < 600 && !limited; i++) {
+      const res = await request.post("/api/public/support/sessions", { data: { locale: "en" }, headers: { origin: "http://localhost:3100", "x-forwarded-for": "198.51.100.77" } });
+      if (res.status() === 429) limited = true;
+    }
+    expect(limited).toBe(true);
+  });
+});

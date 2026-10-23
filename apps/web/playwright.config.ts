@@ -48,6 +48,7 @@ export default defineConfig({
       DATABASE_URL: process.env.DATABASE_URL_TEST ?? "",
       BBCARE_ENV: "test",
       BBCARE_AI_PROVIDER: "mock",
+      BBCARE_RATE_LIMIT_MULTIPLIER: "50",
       NEXT_TELEMETRY_DISABLED: "1",
       NEXT_DIST_DIR: ".next-e2e",
     },

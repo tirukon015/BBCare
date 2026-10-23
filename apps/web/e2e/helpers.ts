@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -6,12 +6,29 @@ const here = dirname(fileURLToPath(import.meta.url));
 import { expect, type Page } from "@playwright/test";
 import { totp } from "@bbcare/core";
 
+interface State { password: string; secrets?: Record<string, string>; steps?: Record<string, number> }
+const statePath = join(here, ".e2e-state.json");
+const readState = (): State => JSON.parse(readFileSync(statePath, "utf8")) as State;
+
 export function seedPassword(): string {
-  return (JSON.parse(readFileSync(join(here, ".e2e-state.json"), "utf8")) as { password: string }).password;
+  return readState().password;
 }
 
-const secrets = new Map<string, string>();
-const lastStep = new Map<string, number>();
+/** TOTP secrets of test accounts are kept in the per-run state file so every worker can sign in. */
+const secrets = {
+  get: (email: string) => readState().secrets?.[email],
+  set: (email: string, secret: string) => {
+    const st = readState();
+    writeFileSync(statePath, JSON.stringify({ ...st, secrets: { ...st.secrets, [email]: secret } }), { mode: 0o600 });
+  },
+};
+const lastStep = {
+  get: (email: string) => readState().steps?.[email],
+  set: (email: string, step: number) => {
+    const st = readState();
+    writeFileSync(statePath, JSON.stringify({ ...st, steps: { ...st.steps, [email]: step } }), { mode: 0o600 });
+  },
+};
 
 /** Wait until a fresh 30-second TOTP step so a code is never reused (replay protection). */
 async function freshCode(email: string): Promise<string> {
@@ -28,6 +45,7 @@ async function freshCode(email: string): Promise<string> {
 /** Sign in a seed staff user, enrolling TOTP on first use. */
 export async function staffLogin(page: Page, email: string) {
   await page.goto("/admin/login");
+  await page.waitForLoadState("networkidle");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(seedPassword());
   await page.getByRole("button", { name: "Continue" }).click();

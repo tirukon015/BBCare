@@ -15,16 +15,15 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: getDictionary(localeOrDefault((await params).locale)).search.title, robots: { index: false } };
 }
 
+/** ts_headline marks matches with << >>; split into plain and highlighted segments. */
+function segments(text: string): { text: string; mark: boolean }[] {
+  return text.split(/(<<[^>]*>>)/).filter(Boolean).map((p) => (p.startsWith("<<") && p.endsWith(">>") ? { text: p.slice(2, -2), mark: true } : { text: p, mark: false }));
+}
+
 function Snippet({ text }: { text: string }) {
-  const parts = text.split(/(<<|>>)/);
-  let on = false;
   return (
     <>
-      {parts.map((p, i) => {
-        if (p === "<<") { on = true; return null; }
-        if (p === ">>") { on = false; return null; }
-        return on ? <mark key={i} className="bg-olive-soft text-ink">{p}</mark> : <span key={i}>{p}</span>;
-      })}
+      {segments(text).map((s, i) => (s.mark ? <mark key={i} className="bg-olive-soft text-ink">{s.text}</mark> : <span key={i}>{s.text}</span>))}
     </>
   );
 }

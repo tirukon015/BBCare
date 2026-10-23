@@ -10,7 +10,7 @@ const config = [
       ],
     },
   },
-  { ignores: [".next/**", "playwright-report/**", "test-results/**", "next-env.d.ts"] },
+  { ignores: [".next/**", ".next-e2e/**", "e2e/.e2e-state.json", "playwright-report/**", "test-results/**", "next-env.d.ts"] },
 ];
 
 export default config;

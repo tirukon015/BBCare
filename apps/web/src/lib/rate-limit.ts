@@ -18,8 +18,17 @@ export const LIMITS = {
  * Token bucket stored in an UNLOGGED Postgres table so limits are shared across processes.
  * Keys are hashed so raw IPs are not stored.
  */
+/** Test environments may scale limits up (never allowed in staging or production). */
+function multiplier(): number {
+  const env = process.env.BBCARE_ENV;
+  const m = Number(process.env.BBCARE_RATE_LIMIT_MULTIPLIER ?? "1");
+  return env === "test" || env === "development" ? Math.max(1, Math.min(m || 1, 1000)) : 1;
+}
+
 export async function rateLimit(scope: keyof typeof LIMITS, subject: string): Promise<boolean> {
-  const { capacity, refillPerSecond } = LIMITS[scope];
+  const m = multiplier();
+  const capacity = LIMITS[scope].capacity * m;
+  const refillPerSecond = LIMITS[scope].refillPerSecond * m;
   const key = `${scope}:${sha256Hex(subject).slice(0, 32)}`;
   const [row] = await db()<{ allowed: boolean }[]>`
     INSERT INTO ops.rate_limits (key, tokens, updated_at) VALUES (${key}, ${capacity - 1}, now())

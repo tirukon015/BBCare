@@ -10,6 +10,7 @@ test.describe("staff administration", () => {
 
   test("wrong password is rejected without revealing which field was wrong", async ({ page }) => {
     await page.goto("/admin/login");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Email").fill("admin@bbcare.test");
     await page.getByLabel("Password").fill("not-the-password");
     await page.getByRole("button", { name: "Continue" }).click();

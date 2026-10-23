@@ -4,7 +4,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-import { createSql, migrate, resetDatabase, seed } from "@bbcare/db";
+import { createSql } from "@bbcare/db";
+import { migrate, resetDatabase } from "@bbcare/db/migrate";
+import { seed } from "@bbcare/db/seed";
 
 /** Reset the disposable test database, migrate, and seed synthetic data with a per-run password. */
 export default async function globalSetup() {

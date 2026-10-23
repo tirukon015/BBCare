@@ -1,19 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import type { Dictionary } from "@/i18n";
-import { readConsent, saveConsent } from "@/lib/client/consent";
+import { readConsent, saveConsent, subscribeConsent } from "@/lib/client/consent";
+
+/** "server" while rendering on the server, so the banner never flashes for users who already chose. */
+const getServerSnapshot = () => "server" as const;
 
 export function ConsentBanner({ t }: { t: Dictionary["consent"] }) {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    setVisible(readConsent() === null);
-  }, []);
-  if (!visible) return null;
-  const choose = async (analytics: boolean) => {
-    await saveConsent(analytics);
-    setVisible(false);
-  };
+  const consent = useSyncExternalStore(subscribeConsent, readConsent, getServerSnapshot);
+  if (consent !== null) return null;
   return (
     <div role="region" aria-label={t.title} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white p-4 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
       <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -22,10 +18,10 @@ export function ConsentBanner({ t }: { t: Dictionary["consent"] }) {
           <p className="text-ink-soft">{t.body}</p>
         </div>
         <div className="flex shrink-0 gap-2">
-          <button type="button" onClick={() => choose(false)} className="min-h-11 rounded-lg border border-line bg-white px-4 text-sm font-semibold hover:bg-sand" data-testid="consent-reject">
+          <button type="button" onClick={() => saveConsent(false)} className="min-h-11 rounded-lg border border-line bg-white px-4 text-sm font-semibold hover:bg-sand" data-testid="consent-reject">
             {t.reject}
           </button>
-          <button type="button" onClick={() => choose(true)} className="min-h-11 rounded-lg bg-olive px-4 text-sm font-semibold text-white hover:bg-olive-dark" data-testid="consent-accept">
+          <button type="button" onClick={() => saveConsent(true)} className="min-h-11 rounded-lg bg-olive px-4 text-sm font-semibold text-white hover:bg-olive-dark" data-testid="consent-accept">
             {t.accept}
           </button>
         </div>

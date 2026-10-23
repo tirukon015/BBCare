@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { readConsent, saveConsent, type ConsentChoice } from "@/lib/client/consent";
+import { useState, useSyncExternalStore } from "react";
+import { readConsent, saveConsent, subscribeConsent } from "@/lib/client/consent";
 
 export function ConsentSettings({ labels }: { labels: { accept: string; reject: string; saved: string } }) {
-  const [choice, setChoice] = useState<ConsentChoice | null>(null);
+  const choice = useSyncExternalStore(subscribeConsent, readConsent, () => null);
   const [saved, setSaved] = useState(false);
-  useEffect(() => setChoice(readConsent()), []);
   const set = async (analytics: boolean) => {
     await saveConsent(analytics);
-    setChoice(analytics ? "analytics" : "essential");
     setSaved(true);
   };
   return (
