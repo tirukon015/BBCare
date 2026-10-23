@@ -1,0 +1,7 @@
+title = "BBCare gitleaks config"
+[extend]
+useDefault = true
+[allowlist]
+description = "CI-only placeholder values and synthetic test fixtures"
+regexes = ['''ci-only-[a-z-]+''', '''MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=''', '''REPLACE_[A-Z_]+''', '''CHANGE_ME''', '''integration-test-password''']
+paths = ['''pnpm-lock\.yaml''']

@@ -1,0 +1,78 @@
+# BBCare deployment (staging or production). One compose project per environment:
+#   docker compose -p bbcare-staging --env-file /etc/bbcare/staging.env -f infra/compose/docker-compose.yml up -d
+# Secrets live in the env file on the host (chmod 600, owned by the deploy user), never in Git.
+# Ports bind to 127.0.0.1 only; Nginx or Cloudflare Tunnel on the host terminates TLS.
+name: ${COMPOSE_PROJECT_NAME:-bbcare}
+
+services:
+  db:
+    image: ${PGVECTOR_IMAGE:-pgvector/pgvector:pg16}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+    # No published port: the database is reachable only from the internal network.
+
+  migrate:
+    image: ${BBCARE_IMAGE:?set BBCARE_IMAGE}
+    command: ["tooling/packages/db/node_modules/.bin/tsx", "tooling/packages/db/src/cli.ts", "migrate"]
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [internal]
+    restart: "no"
+
+  web:
+    image: ${BBCARE_IMAGE}
+    restart: unless-stopped
+    env_file: ${BBCARE_ENV_FILE:?set BBCARE_ENV_FILE}
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      BBCARE_STORAGE_DIR: /app/storage
+    volumes:
+      - storage:/app/storage
+    ports:
+      - "127.0.0.1:${BBCARE_WEB_PORT:?set BBCARE_WEB_PORT}:3000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    networks: [internal, egress]
+    deploy:
+      resources:
+        limits: { memory: 1g }
+
+  worker:
+    image: ${BBCARE_IMAGE}
+    restart: unless-stopped
+    command: ["tooling/apps/worker/node_modules/.bin/tsx", "tooling/apps/worker/src/index.ts"]
+    working_dir: /app
+    env_file: ${BBCARE_ENV_FILE}
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    networks: [internal, egress]
+    healthcheck:
+      disable: true
+    deploy:
+      resources:
+        limits: { memory: 512m }
+
+volumes:
+  pgdata:
+  storage:
+
+networks:
+  internal:
+    internal: true
+  egress: {}

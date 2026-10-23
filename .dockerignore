@@ -1,0 +1,13 @@
+**/node_modules
+**/.next
+**/.next-e2e
+**/coverage
+**/test-results
+**/playwright-report
+.git
+**/.env
+**/.env.*
+!.env.example
+storage
+packages/db/.seed-credentials.txt
+apps/web/e2e/.e2e-state.json

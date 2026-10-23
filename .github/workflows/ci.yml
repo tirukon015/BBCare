@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  DATABASE_URL: postgres://bbcare:bbcare@localhost:5432/bbcare_ci
+  DATABASE_URL_TEST: postgres://bbcare:bbcare@localhost:5432/bbcare_test
+  BBCARE_ENV: test
+  BBCARE_ENCRYPTION_KEY: ${{ secrets.CI_ENCRYPTION_KEY || 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=' }}
+  BBCARE_SESSION_SECRET: ci-only-session-secret-not-used-anywhere-else-0000
+  BBCARE_AI_PROVIDER: mock
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: bbcare
+          POSTGRES_PASSWORD: bbcare
+          POSTGRES_DB: bbcare_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bbcare" --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Create test database
+        run: PGPASSWORD=bbcare psql -h localhost -U bbcare -d bbcare_ci -c "CREATE DATABASE bbcare_test"
+      - name: Typecheck
+        run: pnpm -r typecheck
+      - name: Lint
+        run: pnpm --filter @bbcare/web lint
+      - name: Unit tests
+        run: pnpm --filter @bbcare/core --filter @bbcare/ai test
+      - name: Database integration tests
+        run: pnpm --filter @bbcare/db test
+      - name: Migrate and seed CI database
+        run: |
+          pnpm db:migrate
+          BBCARE_SEED_PASSWORD=ci-only-seed-password-123 pnpm db:seed
+      - name: Retrieval evaluation gate (no LLM)
+        run: pnpm --filter @bbcare/evals eval:retrieval -- --no-record
+      - name: Dependency audit
+        run: pnpm audit --audit-level high
+      - name: Build
+        run: pnpm --filter @bbcare/web build
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+      - name: Install Playwright browsers
+        run: pnpm --filter @bbcare/web exec playwright install --with-deps chromium webkit
+      - name: End-to-end tests (production build, desktop, Android, iPhone, iPad, WebKit)
+        working-directory: apps/web
+        run: |
+          NEXT_DIST_DIR=.next-e2e pnpm exec next build
+          pnpm exec playwright test
+        env:
+          CI: "1"
+          PW_WEBKIT: "1"
+          E2E_SERVER_COMMAND: pnpm exec next start -p 3100
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.0 detect --source /repo --no-banner --redact --exit-code 1
+
+  docker-image:
+    runs-on: ubuntu-latest
+    needs: checks
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image (not pushed)
+        run: docker build -t bbcare:ci .
