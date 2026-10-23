@@ -20,11 +20,27 @@ export async function requestInfo() {
 }
 
 /** Same-origin check for state-changing JSON endpoints (defence in depth with SameSite cookies). */
+/** Hosts allowed by BBCARE_ALLOWED_ORIGINS, e.g. "*.app.github.dev" for Codespaces previews. */
+export function originAllowedByPattern(host: string, patterns = process.env.BBCARE_ALLOWED_ORIGINS ?? ""): boolean {
+  return patterns
+    .split(",")
+    .map((p) => p.trim().toLowerCase())
+    .filter(Boolean)
+    .some((p) => (p.startsWith("*.") ? host.endsWith(p.slice(1)) && host.length > p.length - 1 : host === p));
+}
+
 export function isSameOrigin(req: Request): boolean {
   const origin = req.headers.get("origin");
   if (!origin) return req.headers.get("sec-fetch-site") !== "cross-site";
   try {
-    return new URL(origin).host === new URL(req.url).host || origin === process.env.BBCARE_BASE_URL;
+    const host = new URL(origin).host.toLowerCase();
+    // Behind a forwarding proxy (Nginx, Cloudflare, Codespaces) the public host arrives in
+    // X-Forwarded-Host / Host. Browsers cannot set these on cross-site requests without a
+    // preflight, which these endpoints do not allow.
+    const candidates = [new URL(req.url).host, req.headers.get("x-forwarded-host"), req.headers.get("host")]
+      .filter((h): h is string => !!h)
+      .map((h) => h.split(",")[0]!.trim().toLowerCase());
+    return candidates.includes(host) || origin === process.env.BBCARE_BASE_URL || originAllowedByPattern(host);
   } catch {
     return false;
   }

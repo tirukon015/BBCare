@@ -1,0 +1,20 @@
+# Codespaces / dev container: app container shares the database container's network,
+# so PostgreSQL is reachable at localhost:5432 and is never published publicly.
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/javascript-node:22-bookworm
+    command: sleep infinity
+    volumes:
+      - ../..:/workspaces:cached
+    network_mode: service:db
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bbcare
+      POSTGRES_PASSWORD: bbcare-dev-only
+      POSTGRES_DB: bbcare_dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

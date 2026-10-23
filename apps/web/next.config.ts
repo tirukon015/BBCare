@@ -7,7 +7,13 @@ const config: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@bbcare/core", "@bbcare/db", "@bbcare/ai"],
   serverExternalPackages: ["postgres", "pino"],
-  experimental: { serverActions: { bodySizeLimit: "16mb" } },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "16mb",
+      // Extra origins for previews behind a forwarding proxy, e.g. "*.app.github.dev".
+      allowedOrigins: (process.env.BBCARE_ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+    },
+  },
   outputFileTracingRoot: new URL("../../", import.meta.url).pathname,
   async headers() {
     return [
