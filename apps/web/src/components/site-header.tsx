@@ -15,13 +15,13 @@ export function SiteHeader({ locale, t }: { locale: Locale; t: Dictionary }) {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2">
         {t.nav.skip}
       </a>
-      <Container className="flex flex-wrap items-center justify-between gap-3 py-3">
+      <Container className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-3">
         <Link href={`/${locale}`} className="flex flex-col leading-tight" aria-label={`${t.meta.title} - ${t.nav.home}`}>
           <span className="text-xl font-bold tracking-tight text-ink">BBCare</span>
           <span className="text-xs text-muted">{t.meta.descriptor}</span>
         </Link>
         <nav aria-label="Main" className="order-3 w-full sm:order-2 sm:w-auto">
-          <ul className="flex flex-wrap gap-1 text-sm">
+          <ul className="-mx-1 flex gap-1 overflow-x-auto text-sm whitespace-nowrap sm:mx-0 sm:flex-wrap sm:overflow-visible">
             {links.map((l) => (
               <li key={l.href}>
                 <Link href={l.href} className="inline-flex min-h-11 items-center rounded-md px-3 text-ink-soft hover:bg-sand hover:text-ink">

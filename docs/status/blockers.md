@@ -1,6 +1,20 @@
 # Blocker Register
 
-Each entry: what is needed, from whom, why, what has been prepared, what is paused, what continues.
+Batched requests for the owner. Never paste secrets into chat; place them on the host.
 
 | ID | Needed | Owner action | Prepared | Paused | Status |
 |---|---|---|---|---|---|
+| B-01 | Facts about the AI server (hardware, GPU, Ollama models, Flask routes, auth, ports) | Run `infra/scripts/audit-server.sh /path/to/flask-app > bbcare-audit.txt` on the server, review, share privately | Read-only script, tested against a sample Flask app; prints no secret values | Model selection, Flask contract confirmation | open |
+| B-02 | Private network path from the BBCare host to the Flask service | Choose: same host, WireGuard/Tailscale, or approve the optional auth proxy (`infra/nginx/ai-proxy.conf.template`) | Adapter refuses public addresses; integration plan `docs/integration/flask-ai-service.md` | Live AI integration and real evaluation | open |
+| B-03 | Approval to install/benchmark candidate models on the server | Approve a window and memory limits | Model lifecycle in Admin, AI; eval runner; runbook `model-update.md` | Model evaluation | open |
+| B-04 | A host for preview/staging | Confirm the existing server (preferred) or approve a small VPS; provide a deploy user with Docker access | Image, compose, deploy/rollback/backup scripts, rehearsed | Browser-accessible preview for cross-device testing | open |
+| B-05 | Preview domain and tunnel/DNS | Create a Cloudflare Tunnel route or DNS record (for example `preview.<domain>`); optionally Cloudflare Access | Nginx template; preview gate | Remote testing | open |
+| B-06 | Preview/staging secrets on the host | Create `/etc/bbcare/preview.env` from `.env.example` (`chmod 600`), generate keys with `openssl rand -base64 32`, set preview gate and seed password | Template and runbook | Preview deployment | open |
+| B-07 | Real business data | Product list (SKU, names EN/MS), verified Shopee/BBTech.shop listing URLs, manufacturer documents and licence notes | Admin pages for catalog, products, listings, sources; CSV import can be added on request | Launch content (site currently uses fictional sample data) | open |
+| B-08 | Malay language review | A fluent reviewer checks `apps/web/src/i18n/ms.ts`, the privacy notice and sample Malay guides | Strings isolated in one file | Launch sign-off | open |
+| B-09 | Escalation contact details | WhatsApp business number and support email to show customers | `BBCARE_SUPPORT_CONTACT_WHATSAPP`, `BBCARE_SUPPORT_CONTACT_EMAIL` | Direct contact links | open |
+| B-10 | Legal and privacy review; DPO | Qualified review of PDPA 2010 and 2024 amendments, privacy notice, retention periods, consumer-protection disclosures; appoint a data protection officer | Draft privacy notice, retention jobs, data-request and incident runbooks | Production launch | open |
+| B-11 | Off-site backup target | Choose restic/object storage or a second owned machine | `BBCARE_OFFSITE_CMD` hook in backup.sh | Production readiness | open |
+| B-12 | `main` branch | Create `main` from the development branch (or approve the agent creating it) and review the pull request | All work on `claude/festive-einstein-3g612s` | Merge flow | open |
+| B-13 | Historical ChatGPT exports | Provide export files and authorise their import | Parser, staging, review and promotion pipeline (synthetic-tested) | Historical knowledge mining | open |
+| B-14 | Shopee API access (optional) | Apply for Shopee Open Platform or Affiliate access if price/stock or conversion data is wanted | Manual curation in place; price/stock hidden without authorised fresh data | Automated sync | open (optional) |
