@@ -34,7 +34,7 @@ jobs:
           POSTGRES_DB: bbcare_ci
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U bbcare" --health-interval 5s --health-timeout 5s --health-retries 20
+          --health-cmd "pg_isready -U bbcare -d bbcare_ci" --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

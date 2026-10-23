@@ -104,6 +104,10 @@ test.describe("historical import (synthetic export)", () => {
     await expect(page.getByText("[email]")).toBeVisible();
     await expect(page.getByText("test@example.com")).toHaveCount(0);
     await page.getByRole("button", { name: "Promote to unverified source" }).click();
+    // Wait for the server action to finish: the record leaves the "valid" list once promoted.
+    await expect(page.getByText(title)).toHaveCount(0);
+    await page.goto(`${page.url().split("?")[0]}?status=promoted`);
+    await expect(page.getByText(title)).toBeVisible();
     await page.goto("/admin/knowledge/sources");
     const row = page.getByRole("row").filter({ hasText: `Historical chat: ${title}` });
     await expect(row).toContainText("pending");
