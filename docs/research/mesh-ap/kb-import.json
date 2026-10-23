@@ -1,0 +1,835 @@
+{
+  "schema_version": "0.1-draft",
+  "generated_for_review": true,
+  "research_date": "2026-10-23",
+  "records": [
+    {
+      "record_id": "AX20-MESH-GATE",
+      "model_name": "TP-Link Archer AX20",
+      "ecr_code": "AX20",
+      "hardware_revision": "V1, V1.2, V2, V3, V4.6, V5.60",
+      "firmware_requirements": null,
+      "support_category": "mesh_connection_mode",
+      "supported_feature": "easymesh_support_by_version",
+      "customer_question": {
+        "en": "Can my Archer AX20 do mesh?",
+        "ms": "Archer AX20 saya boleh buat mesh ke?"
+      },
+      "symptoms": [
+        "Customer wants to add a mesh unit to an AX20"
+      ],
+      "diagnostic_questions": [
+        "Which hardware version is printed on the label (for example V1, V2, V3)?"
+      ],
+      "decision_rules": [
+        "V3: EasyMesh supported (official excerpt)",
+        "V2: EasyMesh not supported (community only)",
+        "V1/V1.2: conflicting, escalate",
+        "Other: check EasyMesh product list, unverified"
+      ],
+      "troubleshooting_steps": [
+        "Read the hardware version from the label",
+        "Compare with the version table"
+      ],
+      "expected_result": "Customer knows whether the AX20 version supports EasyMesh",
+      "fallback_steps": [
+        "Escalate if the version is V1 or unknown"
+      ],
+      "warnings": [
+        "OneMesh, EasyMesh, Deco and Omada do not interoperate",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Hardware version V1 or not in the table",
+        "Customer disputes the answer"
+      ],
+      "source_title": "Archer AX20 firmware release notes and TP-Link community replies",
+      "source_url": "https://www.tp-link.com/us/support/download/archer-ax20/",
+      "source_section": null,
+      "verification_status": "conflicting",
+      "confidence": "low",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "AX20-MESH-WIRED",
+      "model_name": "TP-Link Archer AX20",
+      "ecr_code": "AX20",
+      "hardware_revision": "V3",
+      "firmware_requirements": ">= 1.2.1",
+      "support_category": "mesh_connection_mode",
+      "supported_feature": "ethernet_backhaul",
+      "customer_question": {
+        "en": "Can I connect my AX20 mesh with a LAN cable?",
+        "ms": "Boleh sambung mesh AX20 guna kabel LAN?"
+      },
+      "symptoms": [
+        "Customer wants wired backhaul"
+      ],
+      "diagnostic_questions": [
+        "Which hardware version?",
+        "Which firmware version is shown on the router's status page?"
+      ],
+      "decision_rules": [
+        "V3 with firmware 1.2.1 or later supports EasyMesh wired backhaul"
+      ],
+      "troubleshooting_steps": [
+        "Confirm V3 and firmware 1.2.1 or later",
+        "Confirm the other unit also supports wired backhaul"
+      ],
+      "expected_result": "Satellite shows as wired in the network map",
+      "fallback_steps": [
+        "Follow Tree 5 checks"
+      ],
+      "warnings": [
+        "Firmware 1.2.1 on V3 cannot be downgraded",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Version is not V3",
+        "Still shows wireless after Tree 5 steps"
+      ],
+      "source_title": "Archer AX20 V3 firmware 1.2.1 release notes",
+      "source_url": "https://www.tp-link.com/us/support/download/archer-ax20/",
+      "source_section": null,
+      "verification_status": "official_excerpt",
+      "confidence": "medium",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "AX20-AP-ENABLE",
+      "model_name": "TP-Link Archer AX20",
+      "ecr_code": "AX20",
+      "hardware_revision": "V1",
+      "firmware_requirements": null,
+      "support_category": "access_point_mode",
+      "supported_feature": "access_point_mode",
+      "customer_question": {
+        "en": "How do I set my AX20 as an access point?",
+        "ms": "Macam mana nak set AX20 jadi access point?"
+      },
+      "symptoms": [
+        "Customer wants to use the AX20 behind an existing router"
+      ],
+      "diagnostic_questions": [
+        "Which router stays as the main router?",
+        "Which hardware version?"
+      ],
+      "decision_rules": [
+        "Steps sourced for V1 only; other versions unverified"
+      ],
+      "troubleshooting_steps": [
+        "Sign in to the router web page",
+        "Advanced > System > Operation Mode > Access Point > Save",
+        "Wait for the reboot",
+        "Connect the AX20 to the existing router with an Ethernet cable",
+        "Open http://tplinkwifi.net, then Advanced > Quick Setup"
+      ],
+      "expected_result": "AX20 broadcasts Wi-Fi and clients get internet from the main router",
+      "fallback_steps": [
+        "If Operation Mode is missing, firmware may be old (community); escalate"
+      ],
+      "warnings": [
+        "Parental Controls, QoS and NAT Forwarding are not available in AP mode (FAQ 3774)",
+        "Which AX20 port connects to the main router is unverified",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Option missing",
+        "Version other than V1",
+        "No internet after Tree 8"
+      ],
+      "source_title": "Archer AX20/AX1800 V1 User Guide, Chapter 4 Set Up Internet Connection",
+      "source_url": "https://www.tp-link.com/us/user-guides/archer-ax20&ax1800_v1/chapter-4-set-up-internet-connection",
+      "source_section": "Chapter 4",
+      "verification_status": "official_excerpt",
+      "confidence": "medium",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "AX20-AP-ADMIN",
+      "model_name": "TP-Link Archer AX20",
+      "ecr_code": "AX20",
+      "hardware_revision": "V1",
+      "firmware_requirements": null,
+      "support_category": "access_point_mode",
+      "supported_feature": "admin_access_in_ap_mode",
+      "customer_question": {
+        "en": "I cannot open the AX20 page after AP mode",
+        "ms": "Tak boleh buka page AX20 lepas AP mode"
+      },
+      "symptoms": [
+        "Admin page not reachable after switching to AP"
+      ],
+      "diagnostic_questions": [
+        "Is your device connected to the AX20's Wi-Fi or cable?"
+      ],
+      "decision_rules": [
+        "Use http://tplinkwifi.net while connected to the AX20"
+      ],
+      "troubleshooting_steps": [
+        "Connect to the AX20 directly",
+        "Open http://tplinkwifi.net"
+      ],
+      "expected_result": "Login page appears",
+      "fallback_steps": [
+        "Escalate; do not ask for the password"
+      ],
+      "warnings": [
+        "A factory reset erases all settings on that unit, including Wi-Fi name, mesh pairing and ISP settings. Reset only the satellite unless BBTech advises otherwise.",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Page still not reachable",
+        "Customer has forgotten the admin password"
+      ],
+      "source_title": "Archer AX20/AX1800 V1 User Guide, Chapter 4",
+      "source_url": "https://www.tp-link.com/us/user-guides/archer-ax20&ax1800_v1/chapter-4-set-up-internet-connection",
+      "source_section": "Chapter 4",
+      "verification_status": "official_excerpt",
+      "confidence": "medium",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "EX5-MESH-PAIR",
+      "model_name": "TP-Link EX510",
+      "ecr_code": "EX5",
+      "hardware_revision": "V1",
+      "firmware_requirements": null,
+      "support_category": "mesh_connection_mode",
+      "supported_feature": "easymesh_pairing",
+      "customer_question": {
+        "en": "How do I add a mesh unit?",
+        "ms": "Macam mana nak tambah unit mesh?"
+      },
+      "symptoms": [
+        "Agent not found",
+        "Pairing fails"
+      ],
+      "diagnostic_questions": [
+        "Which unit is the main router?",
+        "Is the new unit brand new or reset?",
+        "Can you place it next to the main router for setup?"
+      ],
+      "decision_rules": [
+        "Methods in order: Ethernet, WPS, Aginet app, web UI",
+        "App scanning works only between TP-Link ISP-customised models"
+      ],
+      "troubleshooting_steps": [
+        "Check EasyMesh is enabled on the main router (Advanced > EasyMesh)",
+        "Place the agent next to the main router",
+        "Ethernet: main router LAN to agent WAN; wait for the agent's internet light",
+        "Or WPS: press the main router's WPS about 2 seconds, then the agent's within 2 minutes",
+        "Or Aginet app: + > Add Agent > Add as Agent > Done",
+        "Or web UI: Basic > Mesh or Advanced > Wireless > Mesh > Add Mesh Device"
+      ],
+      "expected_result": "Agent appears in the network map and its internet light is on",
+      "fallback_steps": [
+        "Update firmware, disable Guest Wi-Fi and Multi-SSID, retry (FAQ 4758)",
+        "Reset the agent only, then retry"
+      ],
+      "warnings": [
+        "A factory reset erases all settings on that unit, including Wi-Fi name, mesh pairing and ISP settings. Reset only the satellite unless BBTech advises otherwise.",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Fails after one agent reset",
+        "Main router needs a reset"
+      ],
+      "source_title": "How to build Easymesh network with TP-Link customized models (FAQ 4368)",
+      "source_url": "https://www.tp-link.com/us/support/faq/4368/",
+      "source_section": null,
+      "verification_status": "official_general",
+      "confidence": "medium",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "EX2-MESH-PAIR",
+      "model_name": "TP-Link EX230V",
+      "ecr_code": "EX2",
+      "hardware_revision": "V1",
+      "firmware_requirements": null,
+      "support_category": "mesh_connection_mode",
+      "supported_feature": "easymesh_pairing",
+      "customer_question": {
+        "en": "How do I add a mesh unit?",
+        "ms": "Macam mana nak tambah unit mesh?"
+      },
+      "symptoms": [
+        "Agent not found",
+        "Pairing fails"
+      ],
+      "diagnostic_questions": [
+        "Which unit is the main router?",
+        "Is the new unit brand new or reset?",
+        "Can you place it next to the main router for setup?"
+      ],
+      "decision_rules": [
+        "Methods in order: Ethernet, WPS, Aginet app, web UI",
+        "App scanning works only between TP-Link ISP-customised models"
+      ],
+      "troubleshooting_steps": [
+        "Check EasyMesh is enabled on the main router (Advanced > EasyMesh)",
+        "Place the agent next to the main router",
+        "Ethernet: main router LAN to agent WAN; wait for the agent's internet light",
+        "Or WPS: press the main router's WPS about 2 seconds, then the agent's within 2 minutes",
+        "Or Aginet app: + > Add Agent > Add as Agent > Done",
+        "Or web UI: Basic > Mesh or Advanced > Wireless > Mesh > Add Mesh Device"
+      ],
+      "expected_result": "Agent appears in the network map and its internet light is on",
+      "fallback_steps": [
+        "Update firmware, disable Guest Wi-Fi and Multi-SSID, retry (FAQ 4758)",
+        "Reset the agent only, then retry"
+      ],
+      "warnings": [
+        "A factory reset erases all settings on that unit, including Wi-Fi name, mesh pairing and ISP settings. Reset only the satellite unless BBTech advises otherwise.",
+        "EasyMesh does not work while EX230V is in AP mode (community)",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Fails after one agent reset",
+        "Main router needs a reset"
+      ],
+      "source_title": "How to build Easymesh network with TP-Link customized models (FAQ 4368)",
+      "source_url": "https://www.tp-link.com/us/support/faq/4368/",
+      "source_section": null,
+      "verification_status": "official_general",
+      "confidence": "medium",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "EX8-MESH-PAIR",
+      "model_name": "TP-Link EX820V",
+      "ecr_code": "EX8",
+      "hardware_revision": "V1",
+      "firmware_requirements": null,
+      "support_category": "mesh_connection_mode",
+      "supported_feature": "easymesh_pairing",
+      "customer_question": {
+        "en": "How do I add a mesh unit?",
+        "ms": "Macam mana nak tambah unit mesh?"
+      },
+      "symptoms": [
+        "Agent not found",
+        "Pairing fails"
+      ],
+      "diagnostic_questions": [
+        "Which unit is the main router?",
+        "Is the new unit brand new or reset?",
+        "Can you place it next to the main router for setup?"
+      ],
+      "decision_rules": [
+        "Methods in order: Ethernet, WPS, Aginet app, web UI",
+        "App scanning works only between TP-Link ISP-customised models"
+      ],
+      "troubleshooting_steps": [
+        "Check EasyMesh is enabled on the main router (Advanced > EasyMesh)",
+        "Place the agent next to the main router",
+        "Ethernet: main router LAN to agent WAN; wait for the agent's internet light",
+        "Or WPS: press the main router's WPS about 2 seconds, then the agent's within 2 minutes",
+        "Or Aginet app: + > Add Agent > Add as Agent > Done",
+        "Or web UI: Basic > Mesh or Advanced > Wireless > Mesh > Add Mesh Device"
+      ],
+      "expected_result": "Agent appears in the network map and its internet light is on",
+      "fallback_steps": [
+        "Update firmware, disable Guest Wi-Fi and Multi-SSID, retry (FAQ 4758)",
+        "Reset the agent only, then retry"
+      ],
+      "warnings": [
+        "A factory reset erases all settings on that unit, including Wi-Fi name, mesh pairing and ISP settings. Reset only the satellite unless BBTech advises otherwise.",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Fails after one agent reset",
+        "Main router needs a reset"
+      ],
+      "source_title": "How to build Easymesh network with TP-Link customized models (FAQ 4368)",
+      "source_url": "https://www.tp-link.com/us/support/faq/4368/",
+      "source_section": null,
+      "verification_status": "official_general",
+      "confidence": "medium",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "EX2-MESH-WIRED",
+      "model_name": "TP-Link EX230V",
+      "ecr_code": "EX2",
+      "hardware_revision": "V1",
+      "firmware_requirements": null,
+      "support_category": "mesh_connection_mode",
+      "supported_feature": "ethernet_backhaul",
+      "customer_question": {
+        "en": "Mesh still shows wireless though I plugged a cable",
+        "ms": "Dah cucuk kabel tapi mesh masih wireless"
+      },
+      "symptoms": [
+        "Network map shows wireless backhaul with cable connected"
+      ],
+      "diagnostic_questions": [
+        "Which port on each unit is the cable in?",
+        "Is there a switch between them?"
+      ],
+      "decision_rules": [
+        "EX230V wired backhaul support is conflicting; escalate if checks fail"
+      ],
+      "troubleshooting_steps": [
+        "Check cable seated at both ends",
+        "Main LAN to agent WAN",
+        "Remove any switch for a test",
+        "Power cycle the agent"
+      ],
+      "expected_result": "Backhaul shows as wired",
+      "fallback_steps": [
+        "Reset the agent last, then re-pair with the cable connected"
+      ],
+      "warnings": [
+        "A factory reset erases all settings on that unit, including Wi-Fi name, mesh pairing and ISP settings. Reset only the satellite unless BBTech advises otherwise.",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Still wireless after checks"
+      ],
+      "source_title": "Fail to establish EasyMesh (FAQ 3925)",
+      "source_url": "https://www.tp-link.com/nordic/support/faq/3925/",
+      "source_section": "Case 2",
+      "verification_status": "conflicting",
+      "confidence": "low",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "EX5-AP-ENABLE",
+      "model_name": "TP-Link EX510",
+      "ecr_code": "EX5",
+      "hardware_revision": "V1",
+      "firmware_requirements": null,
+      "support_category": "access_point_mode",
+      "supported_feature": "access_point_mode",
+      "customer_question": {
+        "en": "How to set EX510 as access point?",
+        "ms": "Macam mana nak set EX510 jadi access point?"
+      },
+      "symptoms": [
+        "Customer wants AP mode"
+      ],
+      "diagnostic_questions": [
+        "Which router stays as the main router?"
+      ],
+      "decision_rules": [
+        "AP mode is listed for EX510; menu path unverified"
+      ],
+      "troubleshooting_steps": [],
+      "expected_result": "Not available until BBTech confirms the steps",
+      "fallback_steps": [],
+      "warnings": [
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Always escalate for steps"
+      ],
+      "source_title": "EX510 product page",
+      "source_url": "https://service-provider.tp-link.com/wifi-router/ex510/",
+      "source_section": "Operating modes",
+      "verification_status": "unverified",
+      "confidence": "low",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "EX2-AP-ENABLE",
+      "model_name": "TP-Link EX230V",
+      "ecr_code": "EX2",
+      "hardware_revision": "V1",
+      "firmware_requirements": null,
+      "support_category": "access_point_mode",
+      "supported_feature": "access_point_mode",
+      "customer_question": {
+        "en": "How to change EX230V to AP mode?",
+        "ms": "Cara tukar EX230V ke mode AP?"
+      },
+      "symptoms": [
+        "Customer wants AP mode"
+      ],
+      "diagnostic_questions": [
+        "Which router stays as the main router?",
+        "Are you using mesh with this unit?"
+      ],
+      "decision_rules": [
+        "AP mode listed; menu path not retrieved",
+        "Mesh may stop working in AP mode"
+      ],
+      "troubleshooting_steps": [],
+      "expected_result": "Not available until BBTech confirms the steps",
+      "fallback_steps": [],
+      "warnings": [
+        "EasyMesh does not work while EX230V is in AP mode (community)",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Always escalate for steps"
+      ],
+      "source_title": "TP-Link EX230v manual (ManualsLib)",
+      "source_url": "https://www.manualslib.com/manual/3931586/Tp-Link-Ex230v.html",
+      "source_section": null,
+      "verification_status": "unverified",
+      "confidence": "low",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "EX8-AP-ENABLE",
+      "model_name": "TP-Link EX820V",
+      "ecr_code": "EX8",
+      "hardware_revision": "V1",
+      "firmware_requirements": null,
+      "support_category": "access_point_mode",
+      "supported_feature": "access_point_mode",
+      "customer_question": {
+        "en": "Can EX820V be an access point?",
+        "ms": "EX820V boleh jadi access point ke?"
+      },
+      "symptoms": [
+        "Customer wants AP mode"
+      ],
+      "diagnostic_questions": [
+        "Which router stays as the main router?"
+      ],
+      "decision_rules": [
+        "Spec pages list Router Mode only; manual has an AP section. Conflicting"
+      ],
+      "troubleshooting_steps": [],
+      "expected_result": "Escalate",
+      "fallback_steps": [],
+      "warnings": [
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Always escalate"
+      ],
+      "source_title": "TP-Link EX820v manual (ManualsLib) and service-provider spec page",
+      "source_url": "https://www.manualslib.com/manual/3931587/Tp-Link-Ex820v.html",
+      "source_section": null,
+      "verification_status": "conflicting",
+      "confidence": "low",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "EB4-MESH-PAIR",
+      "model_name": "TP-Link EB431V",
+      "ecr_code": "EB4",
+      "hardware_revision": null,
+      "firmware_requirements": null,
+      "support_category": "mesh_connection_mode",
+      "supported_feature": "easymesh_pairing",
+      "customer_question": {
+        "en": "How to mesh EB431V?",
+        "ms": "Macam mana nak mesh EB431V?"
+      },
+      "symptoms": [
+        "Customer wants to pair EB431V"
+      ],
+      "diagnostic_questions": [
+        "Which unit is the main router?"
+      ],
+      "decision_rules": [
+        "EasyMesh-compatible; product page says some EasyMesh functions arrive in later software; not in FAQ 4368 lists"
+      ],
+      "troubleshooting_steps": [],
+      "expected_result": "Escalate until BBTech confirms",
+      "fallback_steps": [],
+      "warnings": [
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Always escalate"
+      ],
+      "source_title": "EB431v product page",
+      "source_url": "https://www.tp-link.com/uk/service-provider/wifi-router/eb431v/",
+      "source_section": "Specifications",
+      "verification_status": "unverified",
+      "confidence": "low",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "EB4-AP-ENABLE",
+      "model_name": "TP-Link EB431V",
+      "ecr_code": "EB4",
+      "hardware_revision": null,
+      "firmware_requirements": null,
+      "support_category": "access_point_mode",
+      "supported_feature": "access_point_mode",
+      "customer_question": {
+        "en": "Set EB431V as access point",
+        "ms": "Set EB431V jadi access point"
+      },
+      "symptoms": [
+        "Customer wants AP mode"
+      ],
+      "diagnostic_questions": [
+        "Which router stays as the main router?"
+      ],
+      "decision_rules": [
+        "AP mode listed on UK and Nordic spec pages; steps unverified"
+      ],
+      "troubleshooting_steps": [],
+      "expected_result": "Escalate until BBTech confirms",
+      "fallback_steps": [],
+      "warnings": [
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Always escalate"
+      ],
+      "source_title": "EB431v product page",
+      "source_url": "https://www.tp-link.com/uk/service-provider/wifi-router/eb431v/",
+      "source_section": "Working modes",
+      "verification_status": "unverified",
+      "confidence": "low",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "KAO-MESH-PAIR",
+      "model_name": "Kaon AR2140",
+      "ecr_code": "KAO",
+      "hardware_revision": null,
+      "firmware_requirements": null,
+      "support_category": "mesh_connection_mode",
+      "supported_feature": "easymesh_pairing",
+      "customer_question": {
+        "en": "How to make my second Kaon a mesh?",
+        "ms": "Macam mana nak jadikan Kaon kedua sebagai mesh?"
+      },
+      "symptoms": [
+        "Second AR2140 not joining"
+      ],
+      "diagnostic_questions": [
+        "Has the second unit been set to Bridge (AP/Repeater)?",
+        "Can you run a LAN cable between the units?"
+      ],
+      "decision_rules": [
+        "Option 1 Ethernet is recommended; Option 2 WPS without cable"
+      ],
+      "troubleshooting_steps": [
+        "Keep units 1 to 2 m apart",
+        "On the second unit, sign in with the details on its own label (do not share them)",
+        "Network > WAN Mode > Bridge (AP/Repeater), enter a friendly name, Apply; unit reboots",
+        "Option 1: yellow LAN to yellow LAN, power both, wait for WPS lights",
+        "Option 2: press WPS on both for about 1 to 2 seconds, wait for WPS lights"
+      ],
+      "expected_result": "Second unit's internet light comes on (community observation)",
+      "fallback_steps": [
+        "Reset the second unit only: hold the rear reset button more than 8 seconds, then repeat"
+      ],
+      "warnings": [
+        "A factory reset erases all settings on that unit, including Wi-Fi name, mesh pairing and ISP settings. Reset only the satellite unless BBTech advises otherwise.",
+        "Pairing with non-Maxis routers is unreliable (community)",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Fails after one reset of the second unit",
+        "Main router affected"
+      ],
+      "source_title": "How to setup as EasyMesh WiFi 6 (AR2140), Maxis",
+      "source_url": "https://www.maxis.com.my/content/dam/mxs/documents/maxis-km-document/WiFi_6_EasyMesh_AR2140_Manual.pdf",
+      "source_section": null,
+      "verification_status": "official_excerpt",
+      "confidence": "medium",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "KAO-RESET",
+      "model_name": "Kaon AR2140",
+      "ecr_code": "KAO",
+      "hardware_revision": null,
+      "firmware_requirements": null,
+      "support_category": "mesh_connection_mode",
+      "supported_feature": "factory_reset_last_resort",
+      "customer_question": {
+        "en": "How to reset Kaon to redo mesh?",
+        "ms": "Macam mana nak reset Kaon untuk buat mesh semula?"
+      },
+      "symptoms": [
+        "Re-pair needed after failures"
+      ],
+      "diagnostic_questions": [
+        "Is this the second unit, not the main Maxis router?"
+      ],
+      "decision_rules": [
+        "Only the second unit; the main router reset needs BBTech or Maxis"
+      ],
+      "troubleshooting_steps": [
+        "Hold the rear reset button more than 8 seconds"
+      ],
+      "expected_result": "Unit returns to factory settings and mesh pairing is removed",
+      "fallback_steps": [],
+      "warnings": [
+        "A factory reset erases all settings on that unit, including Wi-Fi name, mesh pairing and ISP settings. Reset only the satellite unless BBTech advises otherwise.",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Main router reset requested",
+        "Unit unresponsive after reset"
+      ],
+      "source_title": "How to setup as EasyMesh WiFi 6 (AR2140), Maxis",
+      "source_url": "https://www.maxis.com.my/content/dam/mxs/documents/maxis-km-document/WiFi_6_EasyMesh_AR2140_Manual.pdf",
+      "source_section": null,
+      "verification_status": "official_excerpt",
+      "confidence": "medium",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "KAO-AP-STANDALONE",
+      "model_name": "Kaon AR2140",
+      "ecr_code": "KAO",
+      "hardware_revision": null,
+      "firmware_requirements": null,
+      "support_category": "access_point_mode",
+      "supported_feature": "access_point_mode",
+      "customer_question": {
+        "en": "Can I use Kaon as AP behind my own router?",
+        "ms": "Boleh guna Kaon sebagai AP belakang router sendiri?"
+      },
+      "symptoms": [
+        "Customer wants standalone AP behind non-Maxis router"
+      ],
+      "diagnostic_questions": [],
+      "decision_rules": [
+        "Only community workarounds found; VoIP may stop working"
+      ],
+      "troubleshooting_steps": [],
+      "expected_result": "Escalate",
+      "fallback_steps": [],
+      "warnings": [
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Always escalate"
+      ],
+      "source_title": "Lowyat: Maxis Kaon AR2140 Wifi 6 Router",
+      "source_url": "https://forum.lowyat.net/topic/5196887/all",
+      "source_section": null,
+      "verification_status": "community",
+      "confidence": "low",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "HUA-MESH-PAIR",
+      "model_name": "Huawei LG-8245-X6",
+      "ecr_code": "HUA",
+      "hardware_revision": null,
+      "firmware_requirements": null,
+      "support_category": "mesh_connection_mode",
+      "supported_feature": "easymesh_pairing",
+      "customer_question": {
+        "en": "How to set second Huawei Wi-Fi 6 as EasyMesh?",
+        "ms": "Macam mana nak set Huawei Wi-Fi 6 kedua jadi EasyMesh?"
+      },
+      "symptoms": [
+        "Second unit does not switch to bridge mode"
+      ],
+      "diagnostic_questions": [
+        "Did you open the second unit's web page after powering it on?"
+      ],
+      "decision_rules": [
+        "If the web page was opened, power cycle and do not open it again"
+      ],
+      "troubleshooting_steps": [
+        "Power on both units 1 to 2 m apart",
+        "Do not open the second unit's web page",
+        "Hold the second unit's WLAN/WPS button more than 10 seconds, then release",
+        "Press the main router's WLAN/WPS button 1 to 2 seconds; its WLAN light blinks",
+        "Wait: second unit restarts with all lights off, switches to bridge mode"
+      ],
+      "expected_result": "Second unit's Internet light stays steady",
+      "fallback_steps": [
+        "Repeat once after a power cycle",
+        "Escalate; reset procedure not sourced"
+      ],
+      "warnings": [
+        "Opening the web page after power-on stops the switch to bridge mode (Maxis manual)",
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Fails after one retry"
+      ],
+      "source_title": "How to use Wi-Fi 6 Router as Wi-Fi 6 EasyMesh (LG-8245-X6), Maxis",
+      "source_url": "https://www.maxis.com.my/content/dam/mxs/documents/maxis-km-document/WiFi_6_EasyMesh_LG-8245-X6_Manual.pdf",
+      "source_section": null,
+      "verification_status": "official_excerpt",
+      "confidence": "medium",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "HUA-MESH-PLACEMENT",
+      "model_name": "Huawei LG-8245-X6",
+      "ecr_code": "HUA",
+      "hardware_revision": null,
+      "firmware_requirements": null,
+      "support_category": "mesh_connection_mode",
+      "supported_feature": "placement",
+      "customer_question": {
+        "en": "Where to place my Huawei mesh unit?",
+        "ms": "Kat mana nak letak unit mesh Huawei?"
+      },
+      "symptoms": [
+        "Weak signal at satellite"
+      ],
+      "diagnostic_questions": [
+        "Where is the unit now relative to the main router and the weak area?"
+      ],
+      "decision_rules": [],
+      "troubleshooting_steps": [
+        "Place halfway between the main router and the dead spot",
+        "One or two rooms away",
+        "Away from corners, electronics and metal"
+      ],
+      "expected_result": "Better coverage in the weak area",
+      "fallback_steps": [
+        "Consider wired backhaul if supported (unverified for this model)"
+      ],
+      "warnings": [
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Still weak after repositioning"
+      ],
+      "source_title": "How to use Wi-Fi 6 Router as Wi-Fi 6 EasyMesh (LG-8245-X6), Maxis",
+      "source_url": "https://www.maxis.com.my/content/dam/mxs/documents/maxis-km-document/WiFi_6_EasyMesh_LG-8245-X6_Manual.pdf",
+      "source_section": null,
+      "verification_status": "official_excerpt",
+      "confidence": "medium",
+      "last_verified_at": null
+    },
+    {
+      "record_id": "HUA-AP",
+      "model_name": "Huawei LG-8245-X6",
+      "ecr_code": "HUA",
+      "hardware_revision": null,
+      "firmware_requirements": null,
+      "support_category": "access_point_mode",
+      "supported_feature": "access_point_mode",
+      "customer_question": {
+        "en": "Can Huawei LG-8245-X6 be an access point?",
+        "ms": "Huawei LG-8245-X6 boleh jadi access point?"
+      },
+      "symptoms": [
+        "Customer wants AP mode"
+      ],
+      "diagnostic_questions": [],
+      "decision_rules": [
+        "No model-specific source found"
+      ],
+      "troubleshooting_steps": [],
+      "expected_result": "Escalate",
+      "fallback_steps": [],
+      "warnings": [
+        "Never ask for or accept Wi-Fi passwords, administrator passwords, label credentials or one-time codes."
+      ],
+      "escalation_conditions": [
+        "Always escalate"
+      ],
+      "source_title": "No source",
+      "source_url": null,
+      "source_section": null,
+      "verification_status": "unverified",
+      "confidence": "low",
+      "last_verified_at": null
+    }
+  ]
+}

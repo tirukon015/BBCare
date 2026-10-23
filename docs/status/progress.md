@@ -39,3 +39,7 @@ Last updated: 2026-10-23. "Verified" means checked by automated tests or a rehea
 - Vector retrieval is wired (embeddings job, schema) but search stays lexical until an embedding model is approved and an HNSW index migration is added for its dimension.
 - Admin area is English only; Malay admin labels can be added later.
 - Malay UI strings need review by a fluent speaker (B-08).
+
+## Router mesh and AP research (2026-10-23)
+- Research draft in `docs/research/mesh-ap/`: matrix, mesh and AP guides, bilingual question bank, 11 decision trees, source register, gaps, import schema and 19 draft records, summary.
+- Not imported into the application. Sources read through search excerpts only (B-15). Needs BBTech review (B-16).
