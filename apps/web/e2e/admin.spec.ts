@@ -43,7 +43,7 @@ test.describe("staff administration", () => {
     const reviewer = await reviewerCtx.newPage();
     await staffLogin(reviewer, "reviewer@bbcare.test");
     await reviewer.goto("/admin/review");
-    await expect(reviewer.getByRole("link", { name: "E2E: Router lights explained" })).toBeVisible();
+    await expect(reviewer.getByRole("link", { name: "E2E: Router lights explained" }).first()).toBeVisible();
     await reviewer.goto(articleUrl);
     await reviewer.locator("details").first().click();
     await reviewer.getByTestId("rev-approve").click();
@@ -54,7 +54,7 @@ test.describe("staff administration", () => {
     await reviewer.goto(`/en/articles/${slug}`);
     await expect(reviewer.getByRole("heading", { level: 1, name: "E2E: Router lights explained" })).toBeVisible();
     await reviewer.goto("/en/search?q=router+lights+explained");
-    await expect(reviewer.getByRole("link", { name: "E2E: Router lights explained" })).toBeVisible();
+    await expect(reviewer.getByRole("link", { name: "E2E: Router lights explained" }).first()).toBeVisible();
     await reviewerCtx.close();
   });
 
@@ -85,11 +85,13 @@ test.describe("staff administration", () => {
 test.describe("historical import (synthetic export)", () => {
   test("stages, scrubs, and promotes to an unverified source", async ({ page }, info) => {
     test.skip(info.project.name !== "desktop-chrome", "desktop only");
+    const run = Date.now().toString(36);
+    const title = `Router keeps dropping ${run}`;
     const exportJson = [
-      { id: "synthetic-1", title: "Router keeps dropping", create_time: 1700000000, current_node: "b", mapping: {
-        a: { id: "a", parent: null, message: { author: { role: "user" }, content: { content_type: "text", parts: ["My router NB-AX3000 drops wifi at night. Email me test@example.com"] } } },
+      { id: `synthetic-1-${run}`, title, create_time: 1700000000, current_node: "b", mapping: {
+        a: { id: "a", parent: null, message: { author: { role: "user" }, content: { content_type: "text", parts: [`My router NB-AX3000 drops wifi at night (${run}). Email me test@example.com`] } } },
         b: { id: "b", parent: "a", message: { author: { role: "assistant" }, content: { content_type: "text", parts: ["Try changing the wifi channel."] } } } } },
-      { id: "synthetic-2", title: "Holiday plans", current_node: "x", mapping: { x: { id: "x", parent: null, message: { author: { role: "user" }, content: { content_type: "text", parts: ["Where to go in Penang?"] } } } } },
+      { id: `synthetic-2-${run}`, title: "Holiday plans", current_node: "x", mapping: { x: { id: "x", parent: null, message: { author: { role: "user" }, content: { content_type: "text", parts: ["Where to go in Penang?"] } } } } },
     ];
     await staffLogin(page, "admin@bbcare.test");
     await page.goto("/admin/imports");
@@ -97,13 +99,13 @@ test.describe("historical import (synthetic export)", () => {
     await page.getByLabel(/owner has authorised/).check();
     await page.getByRole("button", { name: "Stage import" }).click();
     await expect(page).toHaveURL(/\/admin\/imports\/[0-9a-f-]{36}/);
-    await expect(page.getByText("Router keeps dropping")).toBeVisible();
+    await expect(page.getByText(title)).toBeVisible();
     await page.getByText("Show conversation").click();
     await expect(page.getByText("[email]")).toBeVisible();
     await expect(page.getByText("test@example.com")).toHaveCount(0);
     await page.getByRole("button", { name: "Promote to unverified source" }).click();
     await page.goto("/admin/knowledge/sources");
-    const row = page.getByRole("row").filter({ hasText: "Historical chat: Router keeps dropping" });
+    const row = page.getByRole("row").filter({ hasText: `Historical chat: ${title}` });
     await expect(row).toContainText("pending");
     await expect(row).toContainText("unverified");
   });

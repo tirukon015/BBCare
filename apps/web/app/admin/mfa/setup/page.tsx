@@ -1,3 +1,4 @@
+import { secureCookies } from "@/lib/cookie-security";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
@@ -15,7 +16,7 @@ async function confirmAction(form: FormData) {
   if (!codes) redirect("/admin/mfa/setup?e=invalid");
   // Recovery codes are shown once via a short-lived, httpOnly cookie read by the next page.
   const { cookies } = await import("next/headers");
-  (await cookies()).set("bbcare_rc", codes.join(","), { httpOnly: true, sameSite: "strict", path: "/admin/mfa/setup", maxAge: 120, secure: process.env.NODE_ENV === "production" });
+  (await cookies()).set("bbcare_rc", codes.join(","), { httpOnly: true, sameSite: "strict", path: "/admin/mfa/setup", maxAge: 120, secure: secureCookies() });
   redirect("/admin/mfa/setup?done=1");
 }
 

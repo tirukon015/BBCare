@@ -1,3 +1,4 @@
+import { secureCookies } from "@/lib/cookie-security";
 import "server-only";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -28,7 +29,7 @@ export interface StaffUser {
 async function setCookie(token: string) {
   (await cookies()).set(STAFF_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookies(),
     sameSite: "strict",
     path: "/",
     maxAge: ABSOLUTE_HOURS * 3600,

@@ -1,3 +1,4 @@
+import { secureCookies } from "@/lib/cookie-security";
 import "server-only";
 import { cookies } from "next/headers";
 import { SUPPORT_COOKIE } from "./service";
@@ -6,7 +7,7 @@ export async function setSupportCookie(publicId: string, token: string, maxAge: 
   (await cookies()).set(SUPPORT_COOKIE, `${publicId}.${token}`, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookies(),
     path: "/",
     maxAge,
   });
