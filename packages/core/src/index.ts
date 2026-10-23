@@ -10,3 +10,4 @@ export * from "./ranking";
 export * from "./locale";
 export * from "./useragent";
 export * from "./analytics";
+export * from "./files";

@@ -3,9 +3,11 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   reactStrictMode: true,
   transpilePackages: ["@bbcare/core", "@bbcare/db", "@bbcare/ai"],
   serverExternalPackages: ["postgres", "pino"],
+  experimental: { serverActions: { bodySizeLimit: "16mb" } },
   outputFileTracingRoot: new URL("../../", import.meta.url).pathname,
   async headers() {
     return [

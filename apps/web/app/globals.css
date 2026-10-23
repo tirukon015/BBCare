@@ -17,6 +17,7 @@
   --color-danger: #9b2c22;
   --color-danger-soft: #f6e0dc;
   --color-ok: #3d6b3a;
+  --color-chart: #5f7a1f; /* validated: chroma, lightness band, contrast vs surface */
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
   --radius-card: 0.75rem;
 }
