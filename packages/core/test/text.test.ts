@@ -30,6 +30,8 @@ describe("text normalization", () => {
     expect(detectLanguage("router saya tidak boleh sambung internet")).toBe("ms");
     expect(detectLanguage("sy xleh connect wifi")).toBe("ms");
     expect(detectLanguage("my router keeps dropping the connection")).toBe("en");
+    expect(detectLanguage("AX3000 wifi slow")).toBe("en");
+    expect(detectLanguage("laptop panas sgt")).toBe("ms");
   });
   it("extracts model candidates", () => {
     expect(extractModelCandidates("My RT-AX86U keeps rebooting")).toContain("RTAX86U");
@@ -45,11 +47,34 @@ describe("buildTsQuery", () => {
     expect(q).toContain("battery:*");
     expect(q).not.toContain("saya");
     expect(q.split(" | ").length).toBeGreaterThan(3);
+    expect(buildTsQuery("how to set up router")).toContain("(set <-> up)");
+    expect(buildTsQuery("how to set up router")!.split(" | ")).not.toContain("up:*");
   });
   it("returns null for stop words only", () => {
     expect(buildTsQuery("how do I")).toBeNull();
   });
   it("strips tsquery syntax characters", () => {
-    expect(buildTsQuery("wifi & ! ( ) :* <->")).toBe("wifi:* | wireless:* | tanpa:* | wayar:*");
+    expect(buildTsQuery("wifi & ! ( ) :* <->")).toBe("wifi:* | wireless:* | (tanpa <-> wayar)");
+  });
+});
+
+import { detectCategory } from "../src/text";
+describe("detectCategory", () => {
+  it("detects a single explicit category", () => {
+    expect(detectCategory("my laptop xleh cas")).toBe("laptop");
+    expect(detectCategory("wifi lembab")).toBe("router");
+    expect(detectCategory("laptop cannot connect to wifi")).toBeNull();
+    expect(detectCategory("it is broken")).toBeNull();
+  });
+});
+
+import { queryTermGroups, termCoverage } from "../src/text";
+describe("term coverage", () => {
+  it("measures how many query concepts a text covers, counting synonyms", () => {
+    const groups = queryTermGroups("wifi lembab ax3000");
+    expect(groups.length).toBe(3);
+    expect(termCoverage(groups, "nb-ax3000 slow wireless in some rooms")).toBe(1);
+    expect(termCoverage(queryTermGroups("install windows fridge"), "install firmware for your model")).toBeCloseTo(1 / 3);
+    expect(termCoverage([], "x")).toBe(0);
   });
 });

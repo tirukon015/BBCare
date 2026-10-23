@@ -143,11 +143,18 @@ const MALAY_MARKERS = new Set([
   "selepas", "jangan", "perlahan", "skrin", "mengecas", "penghala",
 ]);
 
+/** Colloquial keys that are Malay (excludes English words such as "slow" or "reset"). */
+const MALAY_SHORT_FORMS = new Set([
+  "x", "tak", "tk", "xde", "takde", "tade", "xleh", "xboleh", "takleh", "tkleh", "blh", "leh", "sy", "sye", "sbb", "utk",
+  "dgn", "dh", "dah", "sdh", "da", "nk", "mcm", "camne", "camana", "mcmmana", "pastu", "lps", "jgn", "tlg", "lmbt", "lembab",
+  "bgs", "bateri", "cas", "caj", "panas", "rosak", "komputer", "aku", "sgt", "je", "lah", "pun", "punya",
+]);
+
 /** Heuristic language detection between English and Malay. Defaults to the fallback. */
 export function detectLanguage(input: string, fallback: "en" | "ms" = "en"): "en" | "ms" {
-  const tokens = normalizeForSearch(input).split(" ").filter(Boolean);
+  const tokens = normalizeText(input).split(" ").filter((t) => /\p{L}/u.test(t));
   if (tokens.length === 0) return fallback;
-  const malay = tokens.filter((t) => MALAY_MARKERS.has(t)).length;
+  const malay = tokens.filter((t) => MALAY_MARKERS.has(t) || MALAY_SHORT_FORMS.has(t)).length;
   const ratio = malay / tokens.length;
   if (ratio >= 0.25) return "ms";
   if (ratio === 0 && tokens.length >= 3) return "en";
@@ -177,17 +184,64 @@ const STOP_WORDS = new Set([
  */
 export function buildTsQuery(input: string, maxTerms = 16): string | null {
   const normalized = normalizeForSearch(input);
+  const clean = (token: string) => token.replace(/[^\p{L}\p{N}]/gu, "");
   const terms = new Set<string>();
-  const add = (phrase: string) => {
-    for (const token of phrase.split(/[\s./+-]+/)) {
-      const clean = token.replace(/[^\p{L}\p{N}]/gu, "");
-      if (clean.length >= 2 && !STOP_WORDS.has(clean)) terms.add(clean);
-    }
+  const addToken = (token: string) => {
+    const c = clean(token);
+    if (c.length < 2 || STOP_WORDS.has(c)) return;
+    // Prefix matching only for 3+ characters; short tokens match exactly.
+    terms.add(c.length >= 3 ? `${c}:*` : c);
   };
-  add(normalized);
-  for (const syn of synonymTerms(normalized)) add(syn);
-  // Keep "tidak boleh" style negations meaningful by adding the combined synonym tokens above.
+  for (const token of normalized.split(/[\s./+-]+/)) addToken(token);
+  for (const syn of synonymTerms(normalized)) {
+    const words = syn.split(/\s+/).map(clean).filter(Boolean);
+    if (words.length === 1) addToken(words[0]!);
+    else if (words.length > 1) terms.add(`(${words.join(" <-> ")})`);
+  }
   const list = [...terms].slice(0, maxTerms);
-  if (list.length === 0) return null;
-  return list.map((t) => `${t}:*`).join(" | ");
+  return list.length ? list.join(" | ") : null;
+}
+
+const CATEGORY_WORDS: Record<"router" | "laptop", RegExp> = {
+  laptop: /\b(laptop|lappy|lptop|notebook|komputer riba|komputer|macbook|chromebook|bateri laptop)\b/i,
+  router: /\b(router|penghala|modem|mesh|wifi|wi-fi|wireless|access point|4g router|5g router)\b/i,
+};
+
+/** Detect an explicit product category mentioned in the text, if exactly one is mentioned. */
+export function detectCategory(input: string): "router" | "laptop" | null {
+  const laptop = CATEGORY_WORDS.laptop.test(input);
+  const router = CATEGORY_WORDS.router.test(input);
+  if (laptop && !router) return "laptop";
+  if (router && !laptop) return "router";
+  return null;
+}
+
+/**
+ * Concept groups for a query: each content word with its synonyms. Used to measure how much
+ * of the customer's question a passage actually covers.
+ */
+export function queryTermGroups(input: string): string[][] {
+  const normalized = normalizeForSearch(input);
+  const groups: string[][] = [];
+  for (const raw of normalized.split(/[\s./+-]+/)) {
+    const token = raw.replace(/[^\p{L}\p{N}]/gu, "");
+    if (token.length < 2 || STOP_WORDS.has(token)) continue;
+    const syns = SEARCH_SYNONYMS.find((g) => g.includes(token)) ?? [];
+    groups.push([...new Set([token, ...syns.map((x) => normalizeText(x))])]);
+  }
+  return groups;
+}
+
+/** Fraction of concept groups with at least one variant present (word-prefix match) in text. */
+export function termCoverage(groups: string[][], text: string): number {
+  if (groups.length === 0) return 0;
+  const hay = ` ${normalizeForSearch(text).replace(/[^\p{L}\p{N}\s]/gu, " ")} `;
+  const compact = hay.replace(/\s+/g, "");
+  const hit = groups.filter((g) =>
+    g.some((v) => {
+      const c = v.replace(/[^\p{L}\p{N}\s]/gu, "");
+      return hay.includes(` ${c}`) || (/\d/.test(c) && compact.includes(c.replace(/\s+/g, "")));
+    }),
+  ).length;
+  return hit / groups.length;
 }

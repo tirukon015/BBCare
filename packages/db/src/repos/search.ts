@@ -1,4 +1,4 @@
-import { buildTsQuery, extractModelCandidates, normalizeForSearch, normalizeModelNumber } from "@bbcare/core";
+import { buildTsQuery, extractModelCandidates, normalizeForSearch, normalizeModelNumber, queryTermGroups, termCoverage } from "@bbcare/core";
 import type { Sql } from "../client";
 
 export interface ModelCandidate {
@@ -106,6 +106,8 @@ export interface SearchHit {
   matchLevel: "exact" | "model" | "category";
   appliesToModels: string[];
   localeFallback: boolean;
+  /** Fraction of the query's concepts found in the title and best passage (0 to 1). */
+  coverage: number;
 }
 
 /**
@@ -124,7 +126,7 @@ export async function searchKnowledge(sql: Sql, ctx: SearchContext): Promise<Sea
       {
         article_id: string; slug: string; kind: string; category_slug: string; revision_id: string; locale: "en" | "ms";
         title: string; summary: string; safety_level: "normal" | "caution" | "danger"; chunk_id: string; heading: string;
-        snippet: string; rank: number; match_level: "exact" | "model" | "category"; models: string[] | null;
+        snippet: string; rank: number; match_level: "exact" | "model" | "category"; models: string[] | null; content: string;
       }[]
     >`
       WITH q AS (SELECT to_tsquery('public.bbcare', ${tsq}) AS q),
@@ -158,7 +160,7 @@ export async function searchKnowledge(sql: Sql, ctx: SearchContext): Promise<Sea
         ORDER BY r.article_id, rk.rank DESC
       )
       SELECT a.id AS article_id, a.slug, a.kind, cat.slug AS category_slug, r.id AS revision_id, r.locale, r.title, r.summary,
-             r.safety_level, b.chunk_id, b.heading,
+             r.safety_level, b.chunk_id, b.heading, b.content,
              ts_headline('public.bbcare', b.content, (SELECT q FROM q), 'MaxWords=40, MinWords=15, StartSel=<<, StopSel=>>') AS snippet,
              b.rank::float8 AS rank,
              CASE b.level WHEN 3 THEN 'exact' WHEN 2 THEN 'model' ELSE 'category' END AS match_level,
@@ -175,6 +177,7 @@ export async function searchKnowledge(sql: Sql, ctx: SearchContext): Promise<Sea
     rows = [...(await run(ctx.locale === "en" ? "ms" : "en"))];
     fallback = rows.length > 0;
   }
+  const groups = queryTermGroups(ctx.query);
   const top = rows[0] ? Number(rows[0].rank) : 0;
   rows = rows.filter((r) => Number(r.rank) >= top * 0.4);
   return rows.map((r) => ({
@@ -182,5 +185,6 @@ export async function searchKnowledge(sql: Sql, ctx: SearchContext): Promise<Sea
     revisionId: r.revision_id, locale: r.locale, title: r.title, summary: r.summary, safetyLevel: r.safety_level,
     chunkId: r.chunk_id, heading: r.heading, snippet: r.snippet, rank: Number(r.rank),
     matchLevel: r.match_level, appliesToModels: r.models ?? [], localeFallback: fallback,
+    coverage: termCoverage(groups, `${r.title} ${r.heading} ${r.content} ${(r.models ?? []).join(" ")}`),
   }));
 }
