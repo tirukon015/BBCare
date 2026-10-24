@@ -2,7 +2,7 @@
 
 **Customer Care & Support Platform by BBTech.shop**
 
-BBCare helps BBTech.shop customers in Malaysia troubleshoot routers and laptops in English and Malay. It offers verified guides, step-by-step troubleshooting, a support assistant that works without AI (and can use the owner's local AI once approved), verified product recommendations with Shopee referral links, human escalation, and privacy-conscious first-party analytics.
+BBCare helps BBTech.shop customers in Malaysia with their routers, in English and Malay. The first release supports exactly seven router models (TP-Link Archer AX20, EX510, EX230V, EX820V, EB431V, Kaon AR2140, Huawei LG-8245-X6) in two categories: Mesh Connection Mode and Access Point Mode. Customers choose their model, mode and problem; BBCare shows step-by-step guidance only where staff verified it against a full source, and otherwise asks a few safe questions and hands the case to BBTech staff with a follow-up code. It also includes a support assistant that works without AI (and can use the owner's local AI once approved), human escalation, and privacy-conscious first-party analytics.
 
 ![Desktop home](docs/screenshots/desktop-home-en.png)
 
@@ -30,7 +30,8 @@ pnpm install
 cp .env.example .env            # fill in local values; database name must end in _dev
 ln -s ../../.env apps/web/.env  # Next.js reads env from the app folder
 pnpm db:migrate
-pnpm db:seed                    # synthetic data; credentials in packages/db/.seed-credentials.txt
+pnpm db:seed                    # router catalogue, research drafts, synthetic staff; credentials in packages/db/.seed-credentials.txt
+# BBCARE_SEED_SAMPLES=1 pnpm db:seed   adds fictional test content (used by CI, e2e and evals)
 pnpm dev                        # http://localhost:3000
 pnpm worker                     # optional background jobs
 ```
@@ -43,10 +44,17 @@ pnpm -r typecheck
 pnpm --filter @bbcare/web lint
 pnpm --filter @bbcare/core --filter @bbcare/ai --filter @bbcare/web test     # unit tests
 DATABASE_URL_TEST=postgres://.../bbcare_test pnpm --filter @bbcare/db test   # integration tests (resets the _test database)
-pnpm --filter @bbcare/evals eval:retrieval                                   # retrieval evaluation gate
+pnpm --filter @bbcare/evals eval:retrieval                                   # retrieval evaluation gate (needs a database seeded with BBCARE_SEED_SAMPLES=1)
 pnpm --filter @bbcare/web test:e2e                                           # Playwright: desktop, Android, iPhone, iPad
 ```
 GitHub Actions runs all of these on every push (`.github/workflows/ci.yml`).
+
+## Router catalogue and research
+```bash
+pnpm --filter @bbcare/db router-catalog     # create or update the seven router models (idempotent, never deletes)
+pnpm --filter @bbcare/db import-research    # import docs/research/mesh-ap/kb-import.json as unpublished drafts
+```
+Reviewers verify drafts in Admin, Router coverage and Troubleshooting flows (ADR 0008).
 
 ## Deployment
 Container image plus Docker Compose behind Nginx or a Cloudflare Tunnel. See `docs/runbooks/deploy.md`, `docs/deployment/preview-and-staging.md`. Production deployment, production migrations, DNS changes and enabling customer-facing AI require the owner's explicit approval.

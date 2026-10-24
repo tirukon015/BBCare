@@ -1,6 +1,6 @@
 # Router Mesh and Access Point Troubleshooting Research
 
-**Status:** Research draft for owner and BBTech review. Not imported into the application.
+**Status:** Research draft for owner and BBTech review. Imported into the application only as unpublished draft flows for staff verification (ADR 0008). Full-source verification still blocked (B-15, rechecked 2026-10-24).
 **Research date:** 2026-10-23
 **Scope:** Mesh Connection Mode and Access Point (AP) Mode only, for the seven catalogue models below.
 

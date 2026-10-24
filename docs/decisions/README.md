@@ -11,5 +11,6 @@ Each significant decision has a numbered record. Status values: Proposed, Accept
 | [0005](0005-local-ai-provider-interface.md) | Local AI through a provider interface to the existing Flask service | Accepted |
 | [0006](0006-first-party-analytics.md) | First-party analytics, third-party tools off by default | Accepted |
 | [0007](0007-git-workflow.md) | Git workflow and checkpoints | Accepted |
+| [0008](0008-router-first-verified-guidance.md) | Router-first catalogue and verified-only model guidance | Accepted |
 
 Template for new records: Context, Options, Decision, Consequences (cost, privacy, operations), Follow-up.

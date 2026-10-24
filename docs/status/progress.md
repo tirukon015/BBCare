@@ -43,3 +43,15 @@ Last updated: 2026-10-23. "Verified" means checked by automated tests or a rehea
 ## Router mesh and AP research (2026-10-23)
 - Research draft in `docs/research/mesh-ap/`: matrix, mesh and AP guides, bilingual question bank, 11 decision trees, source register, gaps, import schema and 19 draft records, summary.
 - Not imported into the application. Sources read through search excerpts only (B-15). Needs BBTech review (B-16).
+
+## Router-first development cycle (2026-10-24)
+- Seven authoritative router models with ECR codes are the only customer router catalogue (`packages/core/src/router-support.ts`, migration 0002, idempotent `router-catalog` command). Laptop support and fictional models are removed from customer pages; fictional samples remain only for automated tests.
+- Customer journey: choose model, choose Mesh or AP, choose a problem or describe it (English and colloquial Malay matching), verified step-by-step flow with expected results, reset acknowledgement and sources, otherwise safe intake questions and escalation. Case follow-up with reference plus one-time code; customers can add messages. Passwords and one-time codes are redacted from free text.
+- Verification is enforced in the database: model flows publish only when verified by a named reviewer, sourced from an approved reviewed source, and translated (ADR 0008). Research imported as 13 draft flows.
+- Staff: Router coverage page (models, photo upload and second-person verification, scenario coverage matrix, recurring problems), flow verification and sources, case router context, customer replies, resolution recording, AI training example proposal, review and JSONL export.
+- AI preparation: verified-only router evidence builder, abstain without evidence, timeout and malformed-response tests. Not connected; AI remains off.
+- Verification status: no flow is verified yet because full sources are unavailable (B-15). Customers currently receive staff escalation for every scenario.
+
+| Date | Commit | Checks | Pushed |
+|---|---|---|---|
+| 2026-10-24 | router catalogue and journey | typecheck, lint, unit, integration, e2e (local, 4 device profiles), retrieval eval | yes |

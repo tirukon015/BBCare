@@ -75,7 +75,7 @@ export function CaseLookup({ locale, t }: { locale: "en" | "ms"; t: Dictionary }
             <ol className="space-y-2 text-sm">
               {view.messages.map((m, i) => (
                 <li key={i} className={`rounded-lg px-3 py-2 ${m.from === "team" ? "bg-olive-soft" : "bg-sand"}`}>
-                  <span className="block text-xs text-muted">{m.from === "team" ? r.teamLabel : t.support.you} · {fmt(m.at)}</span>
+                  <span className="block text-xs text-ink-soft">{m.from === "team" ? r.teamLabel : t.support.you} · {fmt(m.at)}</span>
                   {m.text}
                 </li>
               ))}

@@ -114,3 +114,58 @@ test.describe("historical import (synthetic export)", () => {
     await expect(row).toContainText("unverified");
   });
 });
+
+test.describe("router support administration", () => {
+  test("router coverage, verification guard and router case context", async ({ browser, request }, info) => {
+    test.skip(info.project.name !== "desktop-chrome", "once");
+    const created = await request.post("/api/public/cases", { data: {
+      locale: "en", name: "Router Tester", channel: "email", contact: "router.tester@example.com", subject: "Kaon AR2140 (KAO): Mesh pairing does not work", consent: true,
+      router: { model: "KAO", mode: "mesh", scenario: "mesh_pairing", answers: { unit_role: "second", link_type: "cable", injected: "x" }, outcome: "not_verified" },
+    } });
+    expect(created.status()).toBe(201);
+    const { reference, followUpCode } = (await created.json()) as { reference: string; followUpCode: string };
+    expect(followUpCode.length).toBeGreaterThan(8);
+
+    const reviewerCtx = await browser.newContext();
+    const reviewer = await reviewerCtx.newPage();
+    await staffLogin(reviewer, "reviewer@bbcare.test");
+    await reviewer.goto("/admin/routers");
+    for (const code of ["AX20", "EX5", "EX2", "EX8", "EB4", "KAO", "HUA"]) await expect(reviewer.locator("main")).toContainText(code);
+    await expect(reviewer.locator("main")).toContainText("Needs BBTech confirmation");
+    await expect(reviewer.getByRole("link", { name: "Live" })).toHaveCount(1);
+    await reviewer.goto("/admin/flows");
+    await reviewer.getByRole("link", { name: "Mesh pairing does not work" }).first().click();
+    await expect(reviewer.getByTestId("flow-verification")).toBeVisible();
+    await reviewer.getByLabel(/What did you check/).fill("Maxis manual, all pages, checked against steps");
+    await reviewer.getByRole("button", { name: /mark verified/ }).click();
+    await expect(reviewer.locator("main [role=alert]")).toContainText(/source|PERLU TERJEMAHAN/);
+    await expect(reviewer.getByRole("button", { name: "Publish" })).toBeVisible();
+    await reviewer.getByRole("button", { name: "Publish" }).click();
+    await expect(reviewer.locator("main [role=alert]")).toBeVisible();
+    await reviewerCtx.close();
+
+    const agentCtx = await browser.newContext();
+    const agent = await agentCtx.newPage();
+    await staffLogin(agent, "agent@bbcare.test");
+    await agent.goto("/admin/cases");
+    await agent.getByRole("link", { name: reference }).click();
+    await expect(agent.getByTestId("case-router")).toContainText("Kaon AR2140 (KAO)");
+    await expect(agent.getByTestId("case-router")).toContainText("Mesh pairing does not work");
+    await expect(agent.getByTestId("case-router")).toContainText("Ethernet cable");
+    await expect(agent.getByTestId("case-router")).not.toContainText("injected");
+    await agent.getByLabel("Assign to me").check();
+    await agent.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(agent.getByText(/assigned by Amir Agent/)).toBeVisible();
+    await agent.waitForLoadState("networkidle");
+    await agent.locator("textarea[name=reply]").fill("Please try the cable once more and tell us the light colour.");
+    await agent.getByRole("button", { name: "Send to customer" }).click();
+    await expect(agent.getByText("Current: Please try the cable once more")).toBeVisible();
+    await agentCtx.close();
+
+    const status = await request.post("/api/public/cases/status", { data: { reference, code: followUpCode } });
+    expect(status.status()).toBe(200);
+    const view = (await status.json()) as { status: string; customerNote: string };
+    expect(view.status).toBe("open");
+    expect(view.customerNote).toContain("light colour");
+  });
+});

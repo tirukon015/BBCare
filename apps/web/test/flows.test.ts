@@ -28,3 +28,16 @@ describe("flow graph validation", () => {
     expect(flowStepsSchema.safeParse([{ ...base[0], script: "x" }]).success).toBe(false);
   });
 });
+
+describe("router flow step rules", () => {
+  it("requires warnings in both languages and danger safety for destructive steps", () => {
+    const steps = flowStepsSchema.parse([{ ...base[0]!, destructive: true }, base[1]]);
+    expect(validateFlowGraph(steps).join(" ")).toMatch(/destructive/);
+    const ok = flowStepsSchema.parse([{ ...base[0]!, destructive: true, safety: "danger", warning_en: "This erases settings.", warning_ms: "Ini memadam tetapan." }, base[1]]);
+    expect(validateFlowGraph(ok)).toEqual([]);
+  });
+  it("requires expected results in both languages together", () => {
+    const steps = flowStepsSchema.parse([{ ...base[0]!, expected_en: "The light turns on." }, base[1]]);
+    expect(validateFlowGraph(steps).join(" ")).toMatch(/expected_en and expected_ms/);
+  });
+});

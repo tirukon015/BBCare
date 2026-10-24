@@ -50,7 +50,7 @@ jobs:
       - name: Lint
         run: pnpm --filter @bbcare/web lint
       - name: Unit tests
-        run: pnpm --filter @bbcare/core --filter @bbcare/ai test
+        run: pnpm --filter @bbcare/core --filter @bbcare/ai --filter @bbcare/web test
       - name: Database integration tests
         run: pnpm --filter @bbcare/db test
       - name: Migrate and seed CI database

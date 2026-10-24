@@ -57,5 +57,16 @@ BBCARE_AI_MAX_CONCURRENCY=2        # protects the server's existing workloads
 - Circuit breaker: three consecutive failures pause calls for 60 seconds; the site falls back to search.
 - Timeouts on every call; requests carry at most four evidence passages and six history messages.
 
+## Router-specialised assistant (prepared, not connected)
+The router journey is ready for retrieval-augmented generation. Nothing below is active; AI answers stay off until the owner approves.
+
+**Retrieval (server side only).** `apps/web/src/modules/router/ai-context.ts` returns evidence for one customer's selected model, mode and problem, taken only from the single published, verified, sourced flow (`getVerifiedRouterFlow`). `packages/ai/src/router-evidence.ts` formats one passage per step with its expected result, warning and source. No case, transcript or other customer's data is ever retrieved; conversation history is limited to the caller's own session (existing behaviour in `support/service.ts`).
+
+**Abstain and escalate.** With no verified evidence, `generateGroundedAnswer` abstains without calling the model, and the customer gets the intake questions and staff escalation. Timeouts, connection failures and malformed or unparseable responses map to `unavailable` or `abstain`, never to an answer (tests in `packages/ai/test/ai.test.ts`). The mock provider remains the test double and is refused in staging and production.
+
+**Wiring step (after approval).** In the router scenario page or the support assistant, call `routerEvidence(...)`, pass the evidence to `generateGroundedAnswer`, and render citations from the flow's sources. Add router questions to `evals/datasets` before activation.
+
+**Learning loop (staff-gated).** Customer question, response, outcome recorded on the case (`resolution_flow_id`, `resolution_note`, `resolution_verified`), staff review, then either a knowledge update (new or corrected flow, verified as above) or a curated example in `ai.training_examples`. An example is proposed by staff from a resolved case, scrubbed of personal data and secrets, and approved by a different reviewer after a privacy screen (enforced in SQL). Only approved examples export as JSONL (Admin, AI, Training examples). Customer messages and AI answers are never added automatically. Fine-tuning is a separate decision once enough approved examples and an evaluation baseline exist.
+
 ## Model selection (after audit)
 Candidates and the evaluation matrix are in the v2/v3 discovery reports summarised in `docs/project/08-local-ai-commerce-and-analytics.md`. Default shortlist when VRAM allows: Qwen3 (Apache 2.0), a SEA-LION variant (verify licence of the exact checkpoint), Sailor2, Gemma 3 (Gemma terms); embeddings bge-m3 (MIT) or Qwen3-Embedding (Apache 2.0). Installing or benchmarking models on the server requires owner approval.

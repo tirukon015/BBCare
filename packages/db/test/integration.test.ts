@@ -112,4 +112,84 @@ d("database integration (real Postgres)", () => {
     expect(ids.length).toBe(5);
     expect(new Set(ids).size).toBe(5);
   });
+
+  describe("router support", () => {
+    it("catalogue holds exactly the seven router models with ECR codes", async () => {
+      const rows = await sql<{ ecr_code: string; display_name: string }[]>`
+        SELECT m.ecr_code, m.display_name FROM catalog.product_models m JOIN catalog.categories c ON c.id = m.category_id
+        WHERE m.ecr_code IS NOT NULL AND c.slug = 'router' AND c.active ORDER BY m.ecr_code`;
+      expect(rows.map((r) => `${r.ecr_code}=${r.display_name}`)).toEqual([
+        "AX20=TP-Link Archer AX20", "EB4=TP-Link EB431V", "EX2=TP-Link EX230V", "EX5=TP-Link EX510", "EX8=TP-Link EX820V", "HUA=Huawei LG-8245-X6", "KAO=Kaon AR2140",
+      ]);
+      const [fake] = await sql`SELECT 1 FROM catalog.product_models m JOIN catalog.categories c ON c.id = m.category_id WHERE c.slug = 'router' AND m.ecr_code IS NULL`;
+      expect(fake).toBeUndefined();
+    });
+
+    it("catalogue seeding is idempotent and keeps names exact", async () => {
+      const { seedRouterCatalog } = await import("../src/router-catalog");
+      await sql.begin((tx) => seedRouterCatalog(tx));
+      const [n] = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM catalog.product_models WHERE ecr_code IS NOT NULL`;
+      expect(n!.n).toBe(7);
+    });
+
+    it("imports research only as unpublished, unverified drafts with Malay placeholders", async () => {
+      const rows = await sql<{ status: string; verification_status: string; placeholders: number }[]>`
+        SELECT f.status, f.verification_status,
+          (SELECT count(*)::int FROM knowledge.flow_steps s WHERE s.flow_id = f.id AND s.prompt_ms LIKE '[PERLU TERJEMAHAN]%') AS placeholders
+        FROM knowledge.flows f WHERE f.research_ref IS NOT NULL`;
+      expect(rows.length).toBeGreaterThan(0);
+      for (const r of rows) {
+        expect(r.status).toBe("draft");
+        expect(r.verification_status).not.toBe("verified");
+        expect(r.placeholders).toBeGreaterThan(0);
+      }
+      const [reset] = await sql<{ destructive: boolean; warning_en: string | null; safety_level: string }[]>`
+        SELECT s.destructive, s.warning_en, s.safety_level FROM knowledge.flow_steps s JOIN knowledge.flows f ON f.id = s.flow_id WHERE f.research_ref = 'KAO-RESET'`;
+      expect(reset).toMatchObject({ destructive: true, safety_level: "danger" });
+      expect(reset!.warning_en).toMatch(/erases all settings/);
+    });
+
+    it("refuses to publish a model flow that is unverified, unsourced or untranslated", async () => {
+      const [f] = await sql<{ id: string }[]>`SELECT id FROM knowledge.flows WHERE research_ref = 'HUA-MESH-PAIR'`;
+      await expect(sql`UPDATE knowledge.flows SET status = 'published' WHERE id = ${f!.id}`).rejects.toThrow();
+      const [u] = await sql<{ id: string }[]>`SELECT id FROM identity.users WHERE email = 'reviewer@bbcare.test'`;
+      // Verified but source still pending: refused.
+      await sql`UPDATE knowledge.flows SET verification_status = 'verified', verified_by = ${u!.id}, verified_at = now() WHERE id = ${f!.id}`;
+      await expect(sql`UPDATE knowledge.flows SET status = 'published' WHERE id = ${f!.id}`).rejects.toThrow(/source/);
+      // Source approved, Malay still a placeholder: refused.
+      await sql`UPDATE knowledge.sources SET status = 'approved', trust_level = 'reviewed' WHERE id IN (SELECT source_id FROM knowledge.flow_sources WHERE flow_id = ${f!.id})`;
+      await expect(sql`UPDATE knowledge.flows SET status = 'published' WHERE id = ${f!.id}`).rejects.toThrow(/Malay/);
+      // Translated: allowed.
+      await sql`UPDATE knowledge.flow_steps SET prompt_ms = 'Langkah ' || step_key, expected_ms = CASE WHEN expected_ms IS NULL THEN NULL ELSE 'Dijangka' END,
+        warning_ms = CASE WHEN warning_ms IS NULL THEN NULL ELSE 'Amaran' END WHERE flow_id = ${f!.id}`;
+      await sql`UPDATE knowledge.flows SET status = 'published' WHERE id = ${f!.id}`;
+      // A second live flow for the same model, mode and problem is refused.
+      const [other] = await sql<{ id: string }[]>`SELECT id FROM knowledge.flows WHERE research_ref = 'HUA-MESH-PLACEMENT'`;
+      await sql`UPDATE knowledge.flow_steps SET prompt_ms = 'Langkah', expected_ms = CASE WHEN expected_ms IS NULL THEN NULL ELSE 'Dijangka' END, warning_ms = CASE WHEN warning_ms IS NULL THEN NULL ELSE 'Amaran' END WHERE flow_id = ${other!.id}`;
+      await expect(sql`UPDATE knowledge.flows SET scenario_key = 'mesh_pairing', verification_status = 'verified', verified_by = ${u!.id}, verified_at = now(), status = 'published' WHERE id = ${other!.id}`).rejects.toThrow(/flows_one_published_scenario/);
+      // Clean up for later tests.
+      await sql`UPDATE knowledge.flows SET status = 'draft' WHERE id = ${f!.id}`;
+    });
+
+    it("rejects a destructive step without warnings in both languages", async () => {
+      const [f] = await sql<{ id: string }[]>`SELECT id FROM knowledge.flows WHERE research_ref = 'KAO-RESET'`;
+      await expect(sql`INSERT INTO knowledge.flow_steps (flow_id, step_key, prompt_en, prompt_ms, destructive, safety_level) VALUES (${f!.id}, 'bad', 'Reset it', 'Reset', true, 'danger')`).rejects.toThrow();
+    });
+
+    it("training examples need a privacy screen and a different reviewer", async () => {
+      const [u] = await sql<{ id: string }[]>`SELECT id FROM identity.users WHERE email = 'agent@bbcare.test'`;
+      const [e] = await sql<{ id: string }[]>`
+        INSERT INTO ai.training_examples (locale, question, answer, proposed_by) VALUES ('en', 'mesh will not pair', 'Use the verified pairing guide.', ${u!.id}) RETURNING id`;
+      await expect(sql`UPDATE ai.training_examples SET status = 'approved', privacy_screened = true, reviewed_by = ${u!.id}, reviewed_at = now() WHERE id = ${e!.id}`).rejects.toThrow();
+      await expect(sql`UPDATE ai.training_examples SET status = 'approved', privacy_screened = false, reviewed_by = gen_random_uuid(), reviewed_at = now() WHERE id = ${e!.id}`).rejects.toThrow();
+    });
+
+    it("case intake and follow-up columns store only structured data", async () => {
+      const [m] = await sql<{ id: string }[]>`SELECT id FROM catalog.product_models WHERE ecr_code = 'KAO'`;
+      await expect(sql`INSERT INTO support.cases (subject, locale, model_id, support_mode, scenario_key) VALUES ('x', 'en', ${m!.id}, 'wifi', 'mesh_pairing')`).rejects.toThrow();
+      const [c] = await sql<{ intake: Record<string, string> }[]>`
+        INSERT INTO support.cases (subject, locale, model_id, support_mode, scenario_key, intake) VALUES ('KAO pairing', 'en', ${m!.id}, 'mesh', 'mesh_pairing', ${sql.json({ unit_role: "second" })}) RETURNING intake`;
+      expect(c!.intake).toEqual({ unit_role: "second" });
+    });
+  });
 });

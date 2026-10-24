@@ -6,6 +6,7 @@ import { validateAnswer } from "../src/validate";
 import { generateGroundedAnswer } from "../src/answer";
 import { createProvider } from "../src/factory";
 import type { Evidence } from "../src/prompts";
+import { routerFlowEvidence } from "../src/router-evidence";
 
 const evidence: Evidence[] = [
   { ref: "E1", chunkId: "c1", revisionId: "r1", title: "Battery not charging", heading: "Battery > Safety", text: "If the battery is swollen, stop using the laptop. Firmware 1.2.0 fixes charging.", safetyLevel: "danger" },
@@ -116,5 +117,49 @@ describe("resilience and factory", () => {
   it("forbids mock in production", () => {
     expect(() => createProvider({ BBCARE_ENV: "production", BBCARE_AI_PROVIDER: "mock" })).toThrow();
     expect(createProvider({ BBCARE_ENV: "development", BBCARE_AI_PROVIDER: "none" })).toBeNull();
+  });
+});
+
+describe("router evidence and failure handling", () => {
+  const flow = {
+    id: "f1", title: "Mesh pairing does not work", modelName: "Kaon AR2140",
+    steps: [
+      { key: "s1", prompt: "Place the units 1 to 2 m apart.", expected: null, warning: null, safetyLevel: "normal" as const },
+      { key: "s2", prompt: "Hold the rear reset button.", expected: "Lights restart.", warning: "This erases settings.", safetyLevel: "danger" as const },
+    ],
+    sources: [{ title: "Maxis AR2140 EasyMesh manual", locator: "p. 3" }],
+  };
+  it("formats one cited passage per verified step, with sources and warnings", () => {
+    const ev = routerFlowEvidence(flow);
+    expect(ev.map((e) => e.ref)).toEqual(["E1", "E2"]);
+    expect(ev[1]!.text).toContain("Warning: This erases settings.");
+    expect(ev[1]!.text).toContain("Source: Maxis AR2140 EasyMesh manual (p. 3)");
+    expect(ev[1]!.safetyLevel).toBe("danger");
+  });
+  it("abstains without calling the provider when there is no verified evidence", async () => {
+    const generate = vi.fn();
+    const r = await generateGroundedAnswer({ name: "x", isMock: false, generate } as never, { question: "q", locale: "en", modelName: "Kaon AR2140", evidence: [], products: [] });
+    expect(r.kind).toBe("abstain");
+    expect(generate).not.toHaveBeenCalled();
+  });
+  it("treats a timeout as unavailable", async () => {
+    const fetchImpl = vi.fn((_u: URL, init: RequestInit) => new Promise<Response>((_res, rej) => {
+      init.signal?.addEventListener("abort", () => rej(Object.assign(new Error("aborted"), { name: "AbortError" })));
+    }));
+    const p = new FlaskAiProvider({ baseUrl: "http://10.0.0.5:5000", token: "t", timeoutMs: 20, fetchImpl: fetchImpl as unknown as typeof fetch });
+    const r = await generateGroundedAnswer(p, { question: "q", locale: "en", modelName: null, evidence: routerFlowEvidence(flow), products: [] });
+    expect(r.kind).toBe("unavailable");
+  });
+  it("abstains on a malformed model response instead of showing it", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ response: "not json {" }), { headers: { "content-type": "application/json" } }));
+    const p = new FlaskAiProvider({ baseUrl: "http://10.0.0.5:5000", token: "t", fetchImpl: fetchImpl as unknown as typeof fetch });
+    const r = await generateGroundedAnswer(p, { question: "q", locale: "en", modelName: null, evidence: routerFlowEvidence(flow), products: [] });
+    expect(r.kind).toBe("abstain");
+  });
+  it("treats a response with no recognizable text as unavailable or abstain, never an answer", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ unexpected: true }), { headers: { "content-type": "application/json" } }));
+    const p = new FlaskAiProvider({ baseUrl: "http://10.0.0.5:5000", token: "t", fetchImpl: fetchImpl as unknown as typeof fetch });
+    const r = await generateGroundedAnswer(p, { question: "q", locale: "en", modelName: null, evidence: routerFlowEvidence(flow), products: [] });
+    expect(r.kind).not.toBe("answer");
   });
 });
