@@ -140,6 +140,8 @@ export const en = {
     pickTitle: "Choose your router",
     pickIntro: "BBCare currently supports these seven router models. Select yours to get help with Mesh Connection Mode or Access Point Mode.",
     ecr: "Code",
+    catalogueUnavailable: "The router list could not be loaded.",
+    catalogueUnavailableBody: "Please try again shortly, or contact our team.",
     imagePending: "Photo pending verification",
     identityNote: "Note",
     chooseMode: "What do you need help with?",

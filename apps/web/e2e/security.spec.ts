@@ -53,7 +53,7 @@ test.describe("security controls", () => {
     expect((await request.get("/api/health")).status()).toBe(200);
     const ready = await request.get("/api/health/ready");
     expect(ready.status()).toBe(200);
-    expect(Object.keys(await ready.json())).toEqual(["status", "migrations"]);
+    expect(Object.keys(await ready.json())).toEqual(["status", "migrations", "routerModels"]);
   });
 });
 

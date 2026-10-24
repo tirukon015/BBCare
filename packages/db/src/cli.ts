@@ -20,7 +20,9 @@ try {
     console.log(`Applied: ${r.applied.join(", ") || "none"}; already applied: ${r.skipped.length}`);
   } else if (command === "seed") {
     const r = await seed(sql, { password: process.env.BBCARE_SEED_PASSWORD || undefined, samples: process.env.BBCARE_SEED_SAMPLES === "1" });
-    console.log(r.created ? "Seeded synthetic data. Credentials written to packages/db/.seed-credentials.txt (or BBCARE_SEED_PASSWORD)." : "Seed skipped: data already present.");
+    console.log(r.created
+      ? `Seeded. Router catalogue: ${r.routerModels} models. Staff credentials in packages/db/.seed-credentials.txt (or BBCARE_SEED_PASSWORD).`
+      : `Existing data kept. Router catalogue brought up to date: ${r.routerModels} models.`);
   } else if (command === "router-catalog") {
     // Idempotent: creates or updates the seven router models. Never deletes. Safe on any environment.
     const ids = await sql.begin((tx) => seedRouterCatalog(tx));

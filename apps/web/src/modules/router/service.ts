@@ -1,7 +1,8 @@
 import "server-only";
-import type { SupportMode } from "@bbcare/core";
+import { ROUTER_ECR_CODES, type SupportMode } from "@bbcare/core";
 import { loadVerifiedRouterFlow, verifiedScenarioKeys } from "@bbcare/db";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import type { Locale } from "@/i18n";
 
 export interface RouterModel {
@@ -29,6 +30,10 @@ export async function listRouterModels(): Promise<RouterModel[]> {
     FROM catalog.product_models m JOIN catalog.brands b ON b.id = m.brand_id JOIN catalog.categories c ON c.id = m.category_id
     WHERE m.ecr_code IS NOT NULL AND m.status = 'active' AND c.slug = 'router' AND c.active
     ORDER BY array_position(ARRAY['AX20','EX5','EX2','EX8','EB4','KAO','HUA']::text[], m.ecr_code), m.display_name`;
+  if (rows.length !== ROUTER_ECR_CODES.length) {
+    // The seven models are created by migration 0004 and the seed; anything else is a data fault.
+    logger.error({ found: rows.map((r) => r.ecr_code), expected: ROUTER_ECR_CODES }, "router catalogue incomplete");
+  }
   return rows.map(toModel);
 }
 

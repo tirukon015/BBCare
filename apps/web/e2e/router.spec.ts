@@ -23,11 +23,41 @@ test.describe("router support journey", () => {
     await expectNoHorizontalScroll(page);
   });
 
-  test("home lists the router models and laptop support is gone", async ({ page }) => {
-    await page.goto("/en");
-    await expect(page.getByTestId("router-model")).toHaveCount(7);
-    await expect(page.getByRole("navigation", { name: "Main" })).not.toContainText("Laptop");
+  // Regression: the homepage once rendered an empty "Choose your router" section on databases
+  // seeded before the router-first change. It must always list all seven models.
+  for (const locale of ["en", "ms"] as const) {
+    test(`homepage (${locale}) shows all seven router cards with names, codes, own placeholders and links`, async ({ page }) => {
+      await page.goto(`/${locale}`);
+      await acceptEssentialOnly(page);
+      await expect(page.getByRole("heading", { name: locale === "ms" ? "Pilih penghala anda" : "Choose your router" })).toBeVisible();
+      await expect(page.getByTestId("router-catalogue-unavailable")).toHaveCount(0);
+      const cards = page.getByTestId("router-model");
+      await expect(cards).toHaveCount(7);
+      for (const [i, [name, ecr]] of MODELS.entries()) {
+        await expect(cards.nth(i)).toBeVisible();
+        await expect(cards.nth(i)).toContainText(name);
+        await expect(cards.nth(i)).toContainText(ecr);
+        // Each card has its own placeholder for its own model until a verified photo exists.
+        await expect(cards.nth(i).getByTestId("image-pending")).toHaveAttribute("data-ecr", ecr);
+      }
+      await expect(page.getByRole("navigation", { name: "Main" })).not.toContainText(/Laptop/);
+      await expect(page.locator("main")).not.toContainText(/Nimbus|Kestrel/);
+      await expectNoHorizontalScroll(page);
+      // Each card opens its own model page with the two supported categories only.
+      await cards.nth(5).click();
+      await expect(page).toHaveURL(new RegExp(`/${locale}/routers/kaon-ar2140$`));
+      await expect(page.getByTestId("model-name")).toHaveText("Kaon AR2140");
+      await expect(page.getByTestId("model-ecr")).toHaveText("KAO");
+      await expect(page.locator("[data-testid^=mode-]")).toHaveCount(2);
+      await page.getByTestId("mode-ap").click();
+      await expect(page.getByTestId("scenario-ap_enable")).toContainText(locale === "ms" ? "Bantuan staf" : "Staff help");
+    });
+  }
+
+  test("laptop support is gone and readiness reports the complete catalogue", async ({ page, request }) => {
     expect((await page.goto("/en/laptops"))?.status()).toBe(404);
+    const ready = await request.get("/api/health/ready");
+    expect(await ready.json()).toMatchObject({ status: "ready", routerModels: 7 });
   });
 
   test("model page shows name, code, identity note and both modes", async ({ page }) => {

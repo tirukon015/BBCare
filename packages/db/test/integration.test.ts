@@ -213,4 +213,58 @@ d("database integration (real Postgres)", () => {
       expect(c!.intake).toEqual({ unit_role: "second" });
     });
   });
+
+  // Regression: databases seeded before the router-first change showed an empty catalogue,
+  // because schema migrations add no rows and the seed skipped existing data. Runs last: it
+  // rebuilds the database.
+  describe("router catalogue on an upgraded database", () => {
+    it("an old seeded database gains all seven models and loses no data", async () => {
+      const { ROUTER_MODELS, normalizeModelNumber } = await import("@bbcare/core");
+      await resetDatabase(sql);
+      const only1 = await mkdtemp(join(tmpdir(), "bbcare-mig1-"));
+      await cp(join(MIGRATIONS_DIR, "0001_initial_schema.sql"), join(only1, "0001_initial_schema.sql"));
+      await migrate(sql, only1);
+      // Shape of the pre-router-first seed: a router category holding fictional models only.
+      const [cat] = await sql<{ id: string }[]>`INSERT INTO catalog.categories (slug, name_en, name_ms) VALUES ('router', 'Router Support', 'Sokongan Penghala') RETURNING id`;
+      await sql`INSERT INTO catalog.categories (slug, name_en, name_ms) VALUES ('laptop', 'Laptop Support', 'Sokongan Laptop')`;
+      const [nimbus] = await sql<{ id: string }[]>`INSERT INTO catalog.brands (slug, name) VALUES ('nimbus', 'Nimbus (sample)') RETURNING id`;
+      await sql`INSERT INTO catalog.product_models (brand_id, category_id, model_number, normalized, slug, display_name) VALUES (${nimbus!.id}, ${cat!.id}, 'NB-AX3000', 'NBAX3000', 'nb-ax3000', 'Nimbus NB-AX3000')`;
+      await sql`INSERT INTO identity.users (email, display_name, password_hash) VALUES ('editor@bbcare.test', 'Eddie Editor', 'x')`;
+
+      await migrate(sql);
+      const rows = await sql<{ ecr_code: string; display_name: string; slug: string; model_number: string; normalized: string; identity_status: string }[]>`
+        SELECT m.ecr_code, m.display_name, m.slug, m.model_number, m.normalized, m.identity_status
+        FROM catalog.product_models m JOIN catalog.categories c ON c.id = m.category_id
+        WHERE m.ecr_code IS NOT NULL AND m.status = 'active' AND c.slug = 'router' AND c.active`;
+      // The SQL data migration must match the code catalogue exactly.
+      const byEcr = new Map(rows.map((r) => [r.ecr_code, r]));
+      expect(rows).toHaveLength(7);
+      for (const m of ROUTER_MODELS) {
+        expect(byEcr.get(m.ecr)).toEqual({ ecr_code: m.ecr, display_name: m.name, slug: m.slug, model_number: m.modelNumber, normalized: normalizeModelNumber(m.modelNumber), identity_status: m.identityStatus });
+      }
+      // Fictional data is kept but moved out of customer view.
+      const [old] = await sql<{ status: string; cat: string; active: boolean }[]>`
+        SELECT m.status, c.slug AS cat, c.active FROM catalog.product_models m JOIN catalog.categories c ON c.id = m.category_id WHERE m.slug = 'nb-ax3000'`;
+      expect(old).toEqual({ status: "hidden", cat: "sample", active: false });
+      const [laptop] = await sql<{ active: boolean }[]>`SELECT active FROM catalog.categories WHERE slug = 'laptop'`;
+      expect(laptop!.active).toBe(false);
+
+      // The seed on an existing database keeps data and tops up the catalogue and drafts.
+      const r = await seed(sql, { credentialsFile: null });
+      expect(r).toMatchObject({ created: false, routerModels: 7 });
+      const [drafts] = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM knowledge.flows WHERE research_ref IS NOT NULL AND status = 'draft'`;
+      expect(drafts!.n).toBeGreaterThan(0);
+      const [users] = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM identity.users`;
+      expect(users!.n).toBe(1);
+    });
+
+    it("a fresh database has the seven models straight after migrations, before any seed", async () => {
+      await resetDatabase(sql);
+      await migrate(sql);
+      const [n] = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM catalog.product_models WHERE ecr_code IS NOT NULL AND status = 'active'`;
+      expect(n!.n).toBe(7);
+      const [fake] = await sql`SELECT 1 FROM catalog.product_models WHERE ecr_code IS NULL`;
+      expect(fake).toBeUndefined();
+    });
+  });
 });

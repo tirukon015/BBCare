@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type postgres from "postgres";
 import type { Sql } from "./client";
 
 export const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
@@ -15,7 +16,18 @@ export interface MigrationResult {
  * Apply SQL migrations in lexical order. Each file runs in its own transaction and is
  * recorded with its checksum. Editing an applied migration is treated as an error.
  */
-export async function migrate(sql: Sql, dir = MIGRATIONS_DIR): Promise<MigrationResult> {
+export async function migrate(pool: Sql, dir = MIGRATIONS_DIR): Promise<MigrationResult> {
+  // The advisory lock is per session: take it, use it and release it on one reserved connection.
+  // (With a pool, an unlock could otherwise run on a different connection and leave the lock held.)
+  const sql = await pool.reserve();
+  try {
+    return await migrateOn(sql, dir);
+  } finally {
+    sql.release();
+  }
+}
+
+async function migrateOn(sql: postgres.ReservedSql, dir: string): Promise<MigrationResult> {
   await sql`
     CREATE TABLE IF NOT EXISTS public.schema_migrations (
       name text PRIMARY KEY,
@@ -38,10 +50,15 @@ export async function migrate(sql: Sql, dir = MIGRATIONS_DIR): Promise<Migration
         result.skipped.push(file);
         continue;
       }
-      await sql.begin(async (tx) => {
-        await tx.unsafe(body);
-        await tx`INSERT INTO public.schema_migrations (name, checksum) VALUES (${file}, ${checksum})`;
-      });
+      await sql`BEGIN`;
+      try {
+        await sql.unsafe(body);
+        await sql`INSERT INTO public.schema_migrations (name, checksum) VALUES (${file}, ${checksum})`;
+        await sql`COMMIT`;
+      } catch (err) {
+        await sql`ROLLBACK`;
+        throw err;
+      }
       result.applied.push(file);
     }
     return result;

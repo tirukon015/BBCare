@@ -145,6 +145,8 @@ export const ms: Dictionary = {
     pickTitle: "Pilih penghala anda",
     pickIntro: "BBCare kini menyokong tujuh model penghala ini. Pilih model anda untuk mendapatkan bantuan bagi Mod Sambungan Mesh atau Mod Titik Akses.",
     ecr: "Kod",
+    catalogueUnavailable: "Senarai penghala tidak dapat dimuatkan.",
+    catalogueUnavailableBody: "Sila cuba sebentar lagi, atau hubungi pasukan kami.",
     imagePending: "Foto menunggu pengesahan",
     identityNote: "Nota",
     chooseMode: "Apakah yang anda perlukan bantuan?",

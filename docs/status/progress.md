@@ -74,3 +74,12 @@ No customer-ready model-specific guidance: 0 of 13 draft flows verified, because
 2. BBTech reviewer: for each draft in Admin, Router coverage, correct the steps against the uploaded manual, add Malay text, approve the source, verify, publish.
 3. BBTech: answer B-16 and upload photos for second-person verification (B-17).
 4. After approval only: connect `routerEvidence` to the assistant and add router questions to the evaluation set.
+
+## Fix: empty router catalogue on existing databases (2026-10-24)
+- Symptom: the homepage "Choose your router" section rendered empty in an existing Codespace.
+- Root cause (reproduced): databases seeded before the router-first change received migrations 0002 and 0003 (schema only), but `pnpm db:seed` skipped because data already existed, so the seven models were never inserted. Fresh databases (CI, local test runs) were correct, which is why the tests passed. The Codespace start script also never re-applied migrations.
+- Fix: migration 0004 inserts the seven models in every database (idempotent) and moves old fictional sample data out of customer view (hidden, inactive category, archived articles; nothing deleted). The seed now always tops up the catalogue and research drafts on an existing database. The Codespace start script applies migrations and the seed on every start. The migration runner now holds its advisory lock on one reserved connection (a latent bug found by the new test). The homepage shows an explicit alert instead of an empty grid if the catalogue is ever incomplete; readiness returns 503 `router_catalogue_incomplete` and logs an error.
+- Each card shows its own placeholder (the model's ECR code and model number on a generic outline, labelled "Photo pending verification") until a verified photo exists.
+- Regression tests: database upgrade from an old seeded database, fresh database after migrations, code catalogue equals the SQL data migration; e2e homepage in English and Malay on desktop, Android, iPhone and iPad asserting all seven cards, codes, per-model placeholders and links.
+- Screenshots: `docs/screenshots/router-home-en-desktop.png`, `docs/screenshots/router-home-ms-android.png`.
+- Existing Codespace: restart it (or run `pnpm db:migrate && pnpm db:seed`) to apply migration 0004.

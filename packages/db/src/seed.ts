@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { hashPassword, normalizeModelNumber } from "@bbcare/core";
+import { ROUTER_MODELS, hashPassword, normalizeModelNumber } from "@bbcare/core";
 import type { Sql } from "./client";
 import { indexRevision } from "./repos/indexing";
 import { importResearchDrafts, seedRouterCatalog, type ResearchRecord } from "./router-catalog";
@@ -61,13 +61,23 @@ async function one<T extends Row>(p: Promise<T[]>): Promise<string> {
   return rows[0].id;
 }
 
-export async function seed(sql: Sql, opts: SeedOptions = {}): Promise<{ password: string; created: boolean }> {
-  const [existing] = await sql`SELECT 1 FROM catalog.categories LIMIT 1`;
-  if (existing) return { password: "", created: false };
+export async function seed(sql: Sql, opts: SeedOptions = {}): Promise<{ password: string; created: boolean; routerModels: number }> {
+  const research = opts.researchRecords === undefined ? await loadResearch() : (opts.researchRecords ?? []);
+  // A database seeded earlier keeps its data, but the router catalogue and research drafts are
+  // always brought up to date (both idempotent), so an older database never shows an empty catalogue.
+  const [existing] = await sql`SELECT 1 FROM identity.users LIMIT 1`;
+  if (existing) {
+    const [editor] = await sql<Row[]>`SELECT id FROM identity.users WHERE email = 'editor@bbcare.test'`;
+    const ids = await sql.begin(async (tx) => {
+      const r = await seedRouterCatalog(tx);
+      await importResearchDrafts(tx, research, editor?.id ?? null);
+      return r;
+    });
+    return { password: "", created: false, routerModels: Object.keys(ids).length };
+  }
 
   const password = opts.password ?? randomBytes(12).toString("base64url");
   const passwordHash = await hashPassword(password);
-  const research = opts.researchRecords === undefined ? await loadResearch() : (opts.researchRecords ?? []);
 
   await sql.begin(async (tx) => {
     const userIds: Record<string, string> = {};
@@ -235,6 +245,6 @@ export async function seed(sql: Sql, opts: SeedOptions = {}): Promise<{ password
     ];
     await writeFile(file, `${lines.join("\n")}\n`, { mode: 0o600 });
   }
-  return { password, created: true };
+  return { password, created: true, routerModels: ROUTER_MODELS.length };
 }
 
