@@ -6,8 +6,8 @@ import { Container } from "./ui";
 export function SiteHeader({ locale, t }: { locale: Locale; t: Dictionary }) {
   const links = [
     { href: `/${locale}/routers`, label: t.nav.routers },
-    { href: `/${locale}/laptops`, label: t.nav.laptops },
     { href: `/${locale}/support`, label: t.nav.support },
+    { href: `/${locale}/support/case`, label: t.router.checkCase },
     { href: `/${locale}/contact`, label: t.nav.contact },
   ];
   return (

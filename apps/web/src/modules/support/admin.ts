@@ -1,5 +1,5 @@
 import "server-only";
-import { decryptSecret } from "@bbcare/core";
+import { decryptSecret, describeIntake, redactSecrets, scenarioByKey, scrubPersonalData } from "@bbcare/core";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { audit } from "@/modules/audit/service";
@@ -33,10 +33,13 @@ export async function getCase(user: StaffUser, caseId: string) {
   const [c] = await sql<{
     id: string; reference: string; status: string; priority: string; subject: string; description: string | null; locale: string;
     preferred_channel: string | null; assigned_to: string | null; session_id: string | null; created_at: Date; contact_purged_at: Date | null;
-    model: string | null; category: string | null;
+    model: string | null; category: string | null; model_id: string | null; ecr_code: string | null; support_mode: string | null; scenario_key: string | null;
+    intake: Record<string, string>; flow_id: string | null; resolution_flow_id: string | null; resolution_note: string | null; customer_note: string | null;
+    resolution_verified: boolean;
   }[]>`
     SELECT c.id, c.reference, c.status, c.priority, c.subject, c.description, c.locale, c.preferred_channel, c.assigned_to, c.session_id,
-           c.created_at, c.contact_purged_at, m.display_name AS model, cat.name_en AS category
+           c.created_at, c.contact_purged_at, m.display_name AS model, cat.name_en AS category, c.model_id, m.ecr_code, c.support_mode, c.scenario_key,
+           c.intake, c.flow_id, c.resolution_flow_id, c.resolution_note, c.customer_note, c.resolution_verified
     FROM support.cases c LEFT JOIN catalog.product_models m ON m.id = c.model_id LEFT JOIN catalog.categories cat ON cat.id = c.category_id
     WHERE c.id = ${caseId}`;
   if (!c) return null;
@@ -47,7 +50,41 @@ export async function getCase(user: StaffUser, caseId: string) {
     ? await sql<{ role: string; content: string; created_at: Date; outcome: string | null }[]>`
         SELECT role, content, created_at, outcome FROM support.messages WHERE session_id = ${c.session_id} ORDER BY created_at LIMIT 100`
     : [];
-  return { ...c, events, transcript };
+  const flows = c.model_id
+    ? await sql<{ id: string; title_en: string; status: string; verification_status: string; scenario_key: string }[]>`
+        SELECT id, title_en, status, verification_status, scenario_key FROM knowledge.flows WHERE model_id = ${c.model_id} AND status <> 'archived' ORDER BY scenario_key, title_en`
+    : [];
+  return { ...c, scenario: c.scenario_key ? scenarioByKey(c.scenario_key) : null, intakeLines: describeIntake(c.intake ?? {}), events, transcript, flows };
+}
+
+/**
+ * Record how a case was resolved: the flow that fixed it (if any), an internal note, and whether
+ * staff confirmed the resolution. A resolution is a candidate for knowledge updates, never
+ * verified knowledge by itself.
+ */
+export async function recordResolution(user: StaffUser, caseId: string, input: { flowId: string | null; note: string; verified: boolean }) {
+  if (!(await canAccess(user, caseId))) throw new Error("forbidden");
+  const sql = db();
+  await sql.begin(async (tx) => {
+    const [c] = await tx<{ model_id: string | null }[]>`SELECT model_id FROM support.cases WHERE id = ${caseId}`;
+    const [f] = input.flowId && c?.model_id ? await tx<{ id: string }[]>`SELECT id FROM knowledge.flows WHERE id = ${input.flowId} AND model_id = ${c.model_id}` : [];
+    await tx`UPDATE support.cases SET resolution_flow_id = ${f?.id ?? null}, resolution_note = ${input.note.slice(0, 2000) || null}, resolution_verified = ${input.verified} WHERE id = ${caseId}`;
+    await tx`INSERT INTO support.case_events (case_id, actor_user_id, kind, data) VALUES (${caseId}, ${user.id}, 'resolution', ${tx.json({ flow: f?.id ?? null, verified: input.verified })})`;
+    await audit({ actorId: user.id, action: "cases.resolution", entityType: "case", entityId: caseId, summary: { flow: f?.id ?? null, verified: input.verified } }, tx);
+  });
+}
+
+/** A message the customer sees when they check their case with the reference and follow-up code. */
+export async function replyToCustomer(user: StaffUser, caseId: string, text: string) {
+  if (!(await canAccess(user, caseId))) throw new Error("forbidden");
+  const clean = redactSecrets(scrubPersonalData(text.trim())).text.slice(0, 1000);
+  if (clean.length < 2) return;
+  const sql = db();
+  await sql.begin(async (tx) => {
+    await tx`UPDATE support.cases SET customer_note = ${clean} WHERE id = ${caseId}`;
+    await tx`INSERT INTO support.case_events (case_id, actor_user_id, kind, data) VALUES (${caseId}, ${user.id}, 'customer_note', ${tx.json({ text: clean })})`;
+    await audit({ actorId: user.id, action: "cases.customer_reply", entityType: "case", entityId: caseId }, tx);
+  });
 }
 
 /** Decrypt contact details for an authorized agent. Every reveal is audited. */
@@ -83,6 +120,16 @@ export async function updateCase(user: StaffUser, caseId: string, change: { stat
     }
     await audit({ actorId: user.id, action: "cases.update", entityType: "case", entityId: caseId, summary: { status: change.status, priority: change.priority, assigned: change.assignToMe, note: !!change.note } }, tx);
   });
+}
+
+export async function routerCaseBreakdown() {
+  return db()<{ ecr_code: string; model: string; support_mode: string | null; scenario_key: string | null; total: number; open: number; resolved_verified: number }[]>`
+    SELECT m.ecr_code, m.display_name AS model, c.support_mode, c.scenario_key, count(*)::int AS total,
+      count(*) FILTER (WHERE c.status IN ('new', 'open', 'waiting_customer'))::int AS open,
+      count(*) FILTER (WHERE c.resolution_verified)::int AS resolved_verified
+    FROM support.cases c JOIN catalog.product_models m ON m.id = c.model_id
+    WHERE m.ecr_code IS NOT NULL AND c.created_at > now() - interval '90 days'
+    GROUP BY 1, 2, 3, 4 ORDER BY total DESC LIMIT 100`;
 }
 
 export async function purgeContact(user: StaffUser, caseId: string) {

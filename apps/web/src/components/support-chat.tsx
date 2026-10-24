@@ -261,6 +261,13 @@ function AssistantMessage({ payload, t, locale, onChoose }: { payload: Assistant
       ) : null}
 
       {payload.kind === "no_answer" ? <p>{s.noAnswer}</p> : null}
+      {payload.routerSuggestion ? (
+        <p data-testid="router-suggestion">
+          <Link className="font-medium text-olive underline" href={`/${locale}/routers/${payload.routerSuggestion.modelSlug}/${payload.routerSuggestion.mode}/${payload.routerSuggestion.scenario}`}>
+            {locale === "ms" ? payload.routerSuggestion.titleMs : payload.routerSuggestion.titleEn}
+          </Link>
+        </p>
+      ) : null}
 
       {payload.kind !== "answer" && payload.articles && payload.articles.length > 0 ? (
         <div>

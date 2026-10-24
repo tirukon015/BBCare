@@ -18,7 +18,7 @@ d("database integration (real Postgres)", () => {
     sql = createSql({ url: url!, max: 2 });
     await resetDatabase(sql);
     await migrate(sql);
-    await seed(sql, { password: "integration-test-password", credentialsFile: null });
+    await seed(sql, { password: "integration-test-password", credentialsFile: null, samples: true });
   });
   afterAll(async () => {
     await sql?.end();

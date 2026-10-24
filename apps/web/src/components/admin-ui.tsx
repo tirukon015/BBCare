@@ -8,6 +8,7 @@ const NAV: { href: string; label: string; permission?: Permission }[] = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/cases", label: "Cases", permission: "cases.read_assigned" },
   { href: "/admin/knowledge", label: "Knowledge", permission: "knowledge.read" },
+  { href: "/admin/routers", label: "Router coverage", permission: "knowledge.read" },
   { href: "/admin/flows", label: "Troubleshooting flows", permission: "knowledge.read" },
   { href: "/admin/review", label: "Review queue", permission: "knowledge.review" },
   { href: "/admin/gaps", label: "Knowledge gaps", permission: "knowledge.read" },

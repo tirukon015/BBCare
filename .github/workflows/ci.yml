@@ -56,7 +56,7 @@ jobs:
       - name: Migrate and seed CI database
         run: |
           pnpm db:migrate
-          BBCARE_SEED_PASSWORD=ci-only-seed-password-123 pnpm db:seed
+          BBCARE_SEED_SAMPLES=1 BBCARE_SEED_PASSWORD=ci-only-seed-password-123 pnpm db:seed
       - name: Retrieval evaluation gate (no LLM)
         run: pnpm --filter @bbcare/evals eval:retrieval -- --no-record
       - name: Dependency audit

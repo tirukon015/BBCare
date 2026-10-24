@@ -1,16 +1,22 @@
 import { randomBytes } from "node:crypto";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { hashPassword, normalizeModelNumber } from "@bbcare/core";
 import type { Sql } from "./client";
 import { indexRevision } from "./repos/indexing";
+import { importResearchDrafts, seedRouterCatalog, type ResearchRecord } from "./router-catalog";
 
 /**
- * Synthetic development and preview data. All brands, models and articles are fictional
- * ("Nimbus" routers, "Kestrel" laptops) so that no sample can be mistaken for verified
- * guidance about a real product. The only real URL used is the official BBTech Shopee shop
- * page supplied by the owner.
+ * Development and test data.
+ *
+ * Always: synthetic staff accounts, the router category with the seven authoritative router
+ * models, and the mesh/AP research imported as unpublished drafts for staff verification.
+ *
+ * Only with `samples: true` (automated tests and retrieval evaluations): fictional content
+ * ("Nimbus" routers, "Kestrel" laptops) placed in an inactive "sample" category, so it never
+ * appears in the customer router catalogue and cannot be mistaken for real product guidance.
+ * The only real URL in the samples is the official BBTech Shopee shop page supplied by the owner.
  */
 
 const SAMPLE_NOTE_EN = "> Synthetic sample content for development and testing. Not verified product guidance.";
@@ -30,6 +36,21 @@ export interface SeedOptions {
   password?: string;
   /** Where to write generated credentials (never committed). */
   credentialsFile?: string | null;
+  /** Add fictional sample content for automated tests. Never for previews shown to customers. */
+  samples?: boolean;
+  /** Research records to import as drafts. Defaults to docs/research/mesh-ap/kb-import.json when present. */
+  researchRecords?: ResearchRecord[] | null;
+}
+
+export const RESEARCH_FILE = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "docs", "research", "mesh-ap", "kb-import.json");
+
+async function loadResearch(): Promise<ResearchRecord[]> {
+  try {
+    const data = JSON.parse(await readFile(RESEARCH_FILE, "utf8")) as { records?: ResearchRecord[] };
+    return data.records ?? [];
+  } catch {
+    return [];
+  }
 }
 
 type Row = { id: string };
@@ -46,6 +67,7 @@ export async function seed(sql: Sql, opts: SeedOptions = {}): Promise<{ password
 
   const password = opts.password ?? randomBytes(12).toString("base64url");
   const passwordHash = await hashPassword(password);
+  const research = opts.researchRecords === undefined ? await loadResearch() : (opts.researchRecords ?? []);
 
   await sql.begin(async (tx) => {
     const userIds: Record<string, string> = {};
@@ -58,8 +80,15 @@ export async function seed(sql: Sql, opts: SeedOptions = {}): Promise<{ password
     const editor = userIds["editor@bbcare.test"]!;
     const reviewer = userIds["reviewer@bbcare.test"]!;
 
-    const router = await one(tx<Row[]>`INSERT INTO catalog.categories (slug, name_en, name_ms, sort_order) VALUES ('router', 'Router Support', 'Sokongan Penghala', 1) RETURNING id`);
-    const laptop = await one(tx<Row[]>`INSERT INTO catalog.categories (slug, name_en, name_ms, sort_order) VALUES ('laptop', 'Laptop Support', 'Sokongan Laptop', 2) RETURNING id`);
+    await seedRouterCatalog(tx);
+    await importResearchDrafts(tx, research, editor);
+    await tx`INSERT INTO ai.models (name, purpose, provider, status, notes) VALUES ('mock-deterministic', 'chat', 'mock', 'candidate', 'Development and test double only. Never for customers.')`;
+    if (!opts.samples) return;
+
+    // Fictional samples share one inactive category: never listed in the customer catalogue.
+    const sampleCat = await one(tx<Row[]>`INSERT INTO catalog.categories (slug, name_en, name_ms, sort_order, active) VALUES ('sample', 'Synthetic samples (testing only)', 'Contoh sintetik (ujian sahaja)', 99, false) RETURNING id`);
+    const router = sampleCat;
+    const laptop = sampleCat;
     const nimbus = await one(tx<Row[]>`INSERT INTO catalog.brands (slug, name) VALUES ('nimbus', 'Nimbus (sample)') RETURNING id`);
     const kestrel = await one(tx<Row[]>`INSERT INTO catalog.brands (slug, name) VALUES ('kestrel', 'Kestrel (sample)') RETURNING id`);
 
@@ -194,7 +223,6 @@ export async function seed(sql: Sql, opts: SeedOptions = {}): Promise<{ password
       await tx`INSERT INTO commerce.listing_verifications (listing_id, method, result, note, checked_by) VALUES (${listingId}, 'manual', 'ok', 'Synthetic seed: links to the official BBTech Shopee shop page', ${reviewer})`;
     }
 
-    await tx`INSERT INTO ai.models (name, purpose, provider, status, notes) VALUES ('mock-deterministic', 'chat', 'mock', 'candidate', 'Development and test double only. Never for customers.')`;
   });
 
   if (!opts.password && opts.credentialsFile !== null) {

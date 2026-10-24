@@ -1,12 +1,12 @@
 import "server-only";
-import { normalizeForSearch, scrubPersonalData, sha256Hex } from "@bbcare/core";
+import { normalizeForSearch, redactSecrets, scrubPersonalData, sha256Hex } from "@bbcare/core";
 import { db } from "@/lib/db";
 
 export type GapSource = "no_results" | "abstain" | "escalation" | "negative_feedback";
 
-/** Record an unanswered question for the knowledge-gap queue (personal data scrubbed first). */
+/** Record an unanswered question for the knowledge-gap queue (personal data and secrets removed first). */
 export async function recordUnresolved(opts: { query: string; locale: "en" | "ms"; source: GapSource; categoryId?: string | null; modelId?: string | null }) {
-  const cleaned = normalizeForSearch(scrubPersonalData(opts.query)).slice(0, 200);
+  const cleaned = normalizeForSearch(redactSecrets(scrubPersonalData(opts.query)).text).slice(0, 200);
   if (cleaned.length < 3) return;
   const fingerprint = sha256Hex(`${opts.locale}|${cleaned}|${opts.modelId ?? ""}`);
   await db()`

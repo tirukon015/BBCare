@@ -42,7 +42,7 @@ export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const isPublicPage =
-    !pathname.startsWith("/api") && !pathname.startsWith("/admin") && !pathname.startsWith("/go/") && !pathname.startsWith("/_next") && !/\.[a-z0-9]+$/i.test(pathname);
+    !pathname.startsWith("/api") && !pathname.startsWith("/admin") && !pathname.startsWith("/go/") && !pathname.startsWith("/media/") && !pathname.startsWith("/_next") && !/\.[a-z0-9]+$/i.test(pathname);
   if (isPublicPage && !/^\/(en|ms)(\/|$)/.test(pathname)) {
     const locale = negotiateLocale(req.headers.get("accept-language"));
     const url = req.nextUrl.clone();

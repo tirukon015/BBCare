@@ -8,6 +8,8 @@
     "migrate": "tsx src/cli.ts migrate",
     "seed": "tsx src/cli.ts seed",
     "reset": "tsx src/cli.ts reset",
+    "router-catalog": "tsx src/cli.ts router-catalog",
+    "import-research": "tsx src/cli.ts import-research",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit"

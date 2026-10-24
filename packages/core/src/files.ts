@@ -46,3 +46,15 @@ const INJECTION_PATTERNS = [
 export function detectPromptInjection(text: string): string[] {
   return INJECTION_PATTERNS.filter((p) => p.test(text)).map((p) => p.source);
 }
+
+export type ImageType = "png" | "jpeg" | "webp";
+export const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+
+/** Product photos: PNG, JPEG or WebP decided by magic bytes. SVG is never accepted (it can carry script). */
+export function sniffImageType(bytes: Uint8Array): ImageType | null {
+  const at = (sig: number[], offset = 0) => sig.every((b, i) => bytes[offset + i] === b);
+  if (at([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "png";
+  if (at([0xff, 0xd8, 0xff])) return "jpeg";
+  if (at([0x52, 0x49, 0x46, 0x46]) && at([0x57, 0x45, 0x42, 0x50], 8)) return "webp";
+  return null;
+}

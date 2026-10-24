@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { assertPermission, requireStaff } from "@/modules/identity/service";
@@ -46,7 +47,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   const sp = await searchParams;
   const canConfigure = user.permissions.has("ai.configure");
   return (
-    <AdminShell user={user} title="AI">
+    <AdminShell user={user} title="AI" actions={<Link href="/admin/ai/examples" className={adminButton}>Training examples</Link>}>
       {sp.e ? <div className="mb-4"><Notice tone="danger" role="alert">{ERR[sp.e] ?? sp.e}</Notice></div> : null}
       {sp.ok ? <div className="mb-4"><Notice tone="olive" role="status">Saved.</Notice></div> : null}
       <div className="mb-6 grid gap-3 sm:grid-cols-2">

@@ -16,6 +16,14 @@ const schema = z
     subject: z.string().trim().min(3).max(200),
     description: z.string().trim().max(4000).optional(),
     consent: z.literal(true),
+    router: z.strictObject({
+      model: z.string().regex(/^[A-Z0-9]{2,6}$/),
+      mode: z.enum(["mesh", "ap"]),
+      scenario: z.string().regex(/^[a-z0-9_]{3,40}$/),
+      answers: z.record(z.string().max(40), z.string().max(40)).refine((a) => Object.keys(a).length <= 12),
+      flowId: z.string().max(40).nullish(),
+      outcome: z.enum(["not_verified", "steps_failed"]).optional(),
+    }).nullish(),
   })
   .refine((v) => (v.channel === "email" ? z.email().safeParse(v.contact).success : /^\+?[\d\s-]{8,20}$/.test(v.contact)), { path: ["contact"], message: "invalid_contact" });
 
@@ -26,5 +34,5 @@ export async function POST(req: Request) {
   if (!parsed.success) return Response.json({ error: "invalid", fields: parsed.error.issues.map((i) => i.path.join(".")) }, { status: 400 });
   const session = parsed.data.sessionId ? await authorizeSession(parsed.data.sessionId, await readSupportCookie()) : null;
   const c = await escalate(session, parsed.data);
-  return Response.json({ reference: c.reference }, { status: 201 });
+  return Response.json({ reference: c.reference, followUpCode: c.followUpCode, redacted: c.redacted }, { status: 201 });
 }

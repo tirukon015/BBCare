@@ -13,6 +13,7 @@ export const PERMISSIONS = [
   "knowledge.write",
   "knowledge.review",
   "knowledge.publish",
+  "knowledge.verify",
   "sources.upload",
   "cases.read_assigned",
   "cases.read_all",
@@ -51,6 +52,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "knowledge.read",
     "knowledge.review",
     "knowledge.publish",
+    "knowledge.verify",
     "analytics.read",
   ],
   support_agent: [

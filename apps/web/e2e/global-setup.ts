@@ -17,7 +17,7 @@ export default async function globalSetup() {
     await resetDatabase(sql);
     await migrate(sql);
     const password = `e2e-${randomBytes(12).toString("hex")}`;
-    await seed(sql, { password, credentialsFile: null });
+    await seed(sql, { password, credentialsFile: null, samples: true });
     writeFileSync(join(here, ".e2e-state.json"), JSON.stringify({ password }), { mode: 0o600 });
   } finally {
     await sql.end();

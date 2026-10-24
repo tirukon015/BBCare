@@ -9,6 +9,7 @@ export const LIMITS = {
   supportMessage: { capacity: 12, refillPerSecond: 0.2 },
   supportSession: { capacity: 10, refillPerSecond: 0.05 },
   escalation: { capacity: 5, refillPerSecond: 0.01 },
+  caseLookup: { capacity: 10, refillPerSecond: 0.05 },
   feedback: { capacity: 30, refillPerSecond: 0.5 },
   login: { capacity: 8, refillPerSecond: 0.02 },
   search: { capacity: 60, refillPerSecond: 1 },
