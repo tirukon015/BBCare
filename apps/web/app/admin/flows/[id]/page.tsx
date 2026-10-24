@@ -58,7 +58,7 @@ async function statusAction(form: FormData) {
 
 const STATUS_ERR: Record<string, string> = {
   not_verified: "Verify this flow before publishing.",
-  no_source: "Link an approved, reviewed source before publishing.",
+  no_source: "Link an approved, reviewed source whose document is held in BBCare (uploaded file or stored text). A web link alone is not accepted: it does not show the manual was read.",
   translation: "Replace every [PERLU TERJEMAHAN] Malay placeholder before publishing.",
   duplicate_live: "Another flow is already live for this model, mode and problem. Archive it first.",
   not_router: "Only model-specific flows need verification.",
@@ -119,7 +119,7 @@ export default async function FlowEditPage({ params, searchParams }: { params: P
                 ) : (
                   <>
                     <label className="block">What did you check? (document, section, page)<textarea name="note" required minLength={10} maxLength={950} rows={2} className={adminInput} /></label>
-                    <button className={adminButton}>I checked every step against the full source: mark verified</button>
+                    <button className={adminButton}>I read the stored source document and checked every step: mark verified</button>
                   </>
                 )}
               </form>
@@ -127,7 +127,7 @@ export default async function FlowEditPage({ params, searchParams }: { params: P
           </section>
           <section className="rounded-[var(--radius-card)] border border-line bg-white p-4 text-sm">
             <h2 className="font-semibold">Sources</h2>
-            <p className="text-xs text-muted">Publishing needs at least one approved source with trust level reviewed or authoritative. Approve sources under Knowledge &gt; Sources.</p>
+            <p className="text-xs text-muted">Verification and publishing need at least one approved source (trust reviewed or authoritative) whose document is held in BBCare: an uploaded manual, or stored text such as a BBTech hands-on test record. A web link alone is not enough. Add and approve sources under Knowledge &gt; Sources.</p>
             <form action={sourcesAction} className="mt-2 space-y-1"><input type="hidden" name="id" value={flow.id} />
               <ul className="max-h-64 space-y-1 overflow-y-auto">
                 {sourceOpts.map((s) => {

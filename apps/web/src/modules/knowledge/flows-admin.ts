@@ -156,17 +156,18 @@ export async function setFlowSources(user: StaffUser, id: string, links: { sourc
 
 /**
  * Record that a named reviewer checked every step of a model-specific flow against the full
- * source. Requires at least one approved, reviewed source and finished Malay text.
+ * source. Requires an approved, reviewed source whose document is held in BBCare, a note naming
+ * what was checked, and finished Malay text.
  */
 export async function verifyFlow(user: StaffUser, id: string, note: string): Promise<{ ok: true } | { ok: false; reason: string }> {
   const sql = db();
   const [f] = await sql<{ model_id: string | null; created_by: string | null }[]>`SELECT model_id, created_by FROM knowledge.flows WHERE id = ${id}`;
   if (!f?.model_id) return { ok: false, reason: "not_router" };
   if (note.trim().length < 10) return { ok: false, reason: "note_required" };
-  const [src] = await sql`
-    SELECT 1 FROM knowledge.flow_sources fs JOIN knowledge.sources s ON s.id = fs.source_id
-    WHERE fs.flow_id = ${id} AND s.status = 'approved' AND s.trust_level IN ('reviewed', 'authoritative') LIMIT 1`;
-  if (!src) return { ok: false, reason: "no_source" };
+  // The document itself must be held in BBCare (uploaded file or stored text); a link alone cannot
+  // show that the manual was actually read. Also enforced by the database trigger.
+  const [src] = await sql<{ ok: boolean }[]>`SELECT knowledge.flow_has_held_source(${id}) AS ok`;
+  if (!src?.ok) return { ok: false, reason: "no_source" };
   const [pending] = await sql`
     SELECT 1 FROM knowledge.flow_steps WHERE flow_id = ${id}
       AND (prompt_ms LIKE '[PERLU TERJEMAHAN]%' OR expected_ms LIKE '[PERLU TERJEMAHAN]%' OR warning_ms LIKE '[PERLU TERJEMAHAN]%') LIMIT 1`;

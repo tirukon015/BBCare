@@ -149,26 +149,47 @@ d("database integration (real Postgres)", () => {
       expect(reset!.warning_en).toMatch(/erases all settings/);
     });
 
-    it("refuses to publish a model flow that is unverified, unsourced or untranslated", async () => {
-      const [f] = await sql<{ id: string }[]>`SELECT id FROM knowledge.flows WHERE research_ref = 'HUA-MESH-PAIR'`;
-      await expect(sql`UPDATE knowledge.flows SET status = 'published' WHERE id = ${f!.id}`).rejects.toThrow();
+    it("verification and publishing need a held, approved source; retrieval sees only verified flows", async () => {
+      const { loadVerifiedRouterFlow, verifiedScenarioKeys } = await import("../src/repos/router");
+      const [f] = await sql<{ id: string; model_id: string }[]>`SELECT id, model_id FROM knowledge.flows WHERE research_ref = 'HUA-MESH-PAIR'`;
       const [u] = await sql<{ id: string }[]>`SELECT id FROM identity.users WHERE email = 'reviewer@bbcare.test'`;
-      // Verified but source still pending: refused.
-      await sql`UPDATE knowledge.flows SET verification_status = 'verified', verified_by = ${u!.id}, verified_at = now() WHERE id = ${f!.id}`;
-      await expect(sql`UPDATE knowledge.flows SET status = 'published' WHERE id = ${f!.id}`).rejects.toThrow(/source/);
-      // Source approved, Malay still a placeholder: refused.
+      const verify = () => sql`UPDATE knowledge.flows SET verification_status = 'verified', verified_by = ${u!.id}, verified_at = now() WHERE id = ${f!.id}`;
+      // Draft and unverified: cannot publish, and retrieval returns nothing.
+      await expect(sql`UPDATE knowledge.flows SET status = 'published' WHERE id = ${f!.id}`).rejects.toThrow();
+      expect(await loadVerifiedRouterFlow(sql, f!.model_id, "mesh", "mesh_pairing")).toBeNull();
+      // Source still pending: cannot be marked verified.
+      await expect(verify()).rejects.toThrow(/held in BBCare/);
+      // Source approved but only a URL (the manual was never available): still refused.
       await sql`UPDATE knowledge.sources SET status = 'approved', trust_level = 'reviewed' WHERE id IN (SELECT source_id FROM knowledge.flow_sources WHERE flow_id = ${f!.id})`;
+      await expect(verify()).rejects.toThrow(/held in BBCare/);
+      // Document text held in BBCare: verification allowed.
+      await sql`UPDATE knowledge.sources SET extracted_text = 'Synthetic stored manual text for this integration test only.' WHERE id IN (SELECT source_id FROM knowledge.flow_sources WHERE flow_id = ${f!.id})`;
+      await verify();
+      // Malay placeholders block publishing; translated text is accepted.
       await expect(sql`UPDATE knowledge.flows SET status = 'published' WHERE id = ${f!.id}`).rejects.toThrow(/Malay/);
-      // Translated: allowed.
+      expect(await loadVerifiedRouterFlow(sql, f!.model_id, "mesh", "mesh_pairing")).toBeNull();
       await sql`UPDATE knowledge.flow_steps SET prompt_ms = 'Langkah ' || step_key, expected_ms = CASE WHEN expected_ms IS NULL THEN NULL ELSE 'Dijangka' END,
         warning_ms = CASE WHEN warning_ms IS NULL THEN NULL ELSE 'Amaran' END WHERE flow_id = ${f!.id}`;
       await sql`UPDATE knowledge.flows SET status = 'published' WHERE id = ${f!.id}`;
+      const live = await loadVerifiedRouterFlow(sql, f!.model_id, "mesh", "mesh_pairing");
+      expect(live?.id).toBe(f!.id);
+      expect(live!.sources.length).toBeGreaterThan(0);
+      expect(await verifiedScenarioKeys(sql, f!.model_id, "mesh")).toEqual(["mesh_pairing"]);
+      // Other models and other scenarios get nothing from this flow.
+      const [kao] = await sql<{ id: string }[]>`SELECT id FROM catalog.product_models WHERE ecr_code = 'KAO'`;
+      expect(await loadVerifiedRouterFlow(sql, kao!.id, "mesh", "mesh_pairing")).toBeNull();
+      expect(await loadVerifiedRouterFlow(sql, f!.model_id, "ap", "ap_enable")).toBeNull();
+      // A live flow cannot lose its only held source.
+      await expect(sql`DELETE FROM knowledge.flow_sources WHERE flow_id = ${f!.id}`).rejects.toThrow(/must keep/);
       // A second live flow for the same model, mode and problem is refused.
       const [other] = await sql<{ id: string }[]>`SELECT id FROM knowledge.flows WHERE research_ref = 'HUA-MESH-PLACEMENT'`;
       await sql`UPDATE knowledge.flow_steps SET prompt_ms = 'Langkah', expected_ms = CASE WHEN expected_ms IS NULL THEN NULL ELSE 'Dijangka' END, warning_ms = CASE WHEN warning_ms IS NULL THEN NULL ELSE 'Amaran' END WHERE flow_id = ${other!.id}`;
       await expect(sql`UPDATE knowledge.flows SET scenario_key = 'mesh_pairing', verification_status = 'verified', verified_by = ${u!.id}, verified_at = now(), status = 'published' WHERE id = ${other!.id}`).rejects.toThrow(/flows_one_published_scenario/);
+      // If the source is later rejected, retrieval stops returning the flow immediately.
+      await sql`UPDATE knowledge.sources SET status = 'rejected' WHERE id IN (SELECT source_id FROM knowledge.flow_sources WHERE flow_id = ${f!.id})`;
+      expect(await loadVerifiedRouterFlow(sql, f!.model_id, "mesh", "mesh_pairing")).toBeNull();
       // Clean up for later tests.
-      await sql`UPDATE knowledge.flows SET status = 'draft' WHERE id = ${f!.id}`;
+      await sql`UPDATE knowledge.flows SET status = 'draft', verification_status = 'unverified', verified_by = NULL, verified_at = NULL WHERE id = ${f!.id}`;
     });
 
     it("rejects a destructive step without warnings in both languages", async () => {

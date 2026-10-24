@@ -55,3 +55,22 @@ Last updated: 2026-10-23. "Verified" means checked by automated tests or a rehea
 | Date | Commit | Checks | Pushed |
 |---|---|---|---|
 | 2026-10-24 | router catalogue and journey | typecheck, lint, unit, integration, e2e (local, 4 device profiles), retrieval eval | yes |
+
+## Checkpoint verification (2026-10-24)
+- Remote branch `claude/festive-einstein-3g612s` matched local at `2c24c3b`; CI run 11 (https://github.com/tirukon015/BBCare/actions/runs/40084970744) passed all jobs. Run 10 had failed only on the colour-contrast issue fixed in `2c24c3b`.
+- Catalogue: a default seed (dev, Codespaces) holds exactly the seven models and no fictional models. Fictional content appears only with `samples: true` (CI, e2e, integration tests, evals) in an inactive category.
+- Hardened verification (migration 0003): a model flow can be marked verified or published only with an approved, reviewed source whose document is held in BBCare. Customer pages and AI retrieval now share `loadVerifiedRouterFlow`; integration tests cover drafts, unverified flows, URL-only sources, other models, source rejection and source removal.
+- Training examples: approval requires a privacy screen and a reviewer other than the proposer (SQL constraint plus service check, tested). Only approved examples export.
+- AI: preparation only. Flags default off; mock provider refused in production; the router evidence function is not called by any customer path; the Flask service is not connected.
+
+### Genuinely complete
+Seven-model catalogue; Mesh/AP customer journey (en/ms) with intake, escalation and case follow-up; staff verification workflow, router coverage, case context, resolution and customer replies; training-example pipeline; AI retrieval preparation; automated tests for all of the above.
+
+### Not complete (blocked)
+No customer-ready model-specific guidance: 0 of 13 draft flows verified, because the manuals cannot be read here (B-15) and no BBTech reviewer has worked through them yet (B-18). No verified photos (B-17).
+
+### Next actions
+1. Owner: allowlist the documentation domains (B-15), or BBTech staff upload the manuals they hold as sources in Admin, Knowledge, Sources.
+2. BBTech reviewer: for each draft in Admin, Router coverage, correct the steps against the uploaded manual, add Malay text, approve the source, verify, publish.
+3. BBTech: answer B-16 and upload photos for second-person verification (B-17).
+4. After approval only: connect `routerEvidence` to the assistant and add router questions to the evaluation set.
