@@ -1,0 +1,16 @@
+{"key":"ax20-mesh-pairing-en","locale":"en","ecr":"AX20","mode":"mesh","scenario":"mesh_pairing","question":"My Archer AX20 will not pair with the second unit, WPS pressed already"}
+{"key":"ax20-ap-enable-ms","locale":"ms","ecr":"AX20","mode":"ap","scenario":"ap_enable","question":"macam mana nak tukar AX20 jadi access point"}
+{"key":"ex5-mesh-pairing-ms","locale":"ms","ecr":"EX5","mode":"mesh","scenario":"mesh_pairing","question":"EX510 tak jumpa agent dalam app"}
+{"key":"ex5-mesh-wired-en","locale":"en","ecr":"EX5","mode":"mesh","scenario":"mesh_wired_backhaul","question":"Can I connect my EX510 mesh with a LAN cable? Which port?"}
+{"key":"ex2-ap-enable-en","locale":"en","ecr":"EX2","mode":"ap","scenario":"ap_enable","question":"How do I set my EX230V as an access point behind my main router?"}
+{"key":"ex2-ap-enable-ms","locale":"ms","ecr":"EX2","mode":"ap","scenario":"ap_enable","question":"nak set EX230V jadi AP mode, caranya?"}
+{"key":"ex2-mesh-no-internet-ms","locale":"ms","ecr":"EX2","mode":"mesh","scenario":"mesh_no_internet","question":"mesh EX230V dah connect tapi takde internet"}
+{"key":"ex8-ap-enable-en","locale":"en","ecr":"EX8","mode":"ap","scenario":"ap_enable","question":"Does the EX820V have an access point mode and how do I turn it on?"}
+{"key":"eb4-mesh-pairing-en","locale":"en","ecr":"EB4","mode":"mesh","scenario":"mesh_pairing","question":"EB431V mesh pairing not working"}
+{"key":"kao-mesh-pairing-en","locale":"en","ecr":"KAO","mode":"mesh","scenario":"mesh_pairing","question":"How do I make my second Kaon AR2140 a mesh unit?"}
+{"key":"kao-mesh-pairing-ms","locale":"ms","ecr":"KAO","mode":"mesh","scenario":"mesh_pairing","question":"kaon unit kedua mcm mana nk buat mesh"}
+{"key":"kao-recovery-ms","locale":"ms","ecr":"KAO","mode":"mesh","scenario":"recovery_failed","question":"dah reset kaon pun masih tak boleh mesh"}
+{"key":"hua-mesh-pairing-en","locale":"en","ecr":"HUA","mode":"mesh","scenario":"mesh_pairing","question":"Huawei LG-8245-X6 second unit will not switch to EasyMesh"}
+{"key":"hua-mesh-unstable-ms","locale":"ms","ecr":"HUA","mode":"mesh","scenario":"mesh_unstable","question":"signal mesh huawei lemah dalam bilik, nak letak kat mana"}
+{"key":"hua-ap-enable-en","locale":"en","ecr":"HUA","mode":"ap","scenario":"ap_enable","question":"Can the Huawei LG-8245-X6 be used as an access point?"}
+{"key":"kao-ap-admin-en","locale":"en","ecr":"KAO","mode":"ap","scenario":"ap_admin_access","question":"I cannot open the Kaon settings page after AP mode, what is the login?"}

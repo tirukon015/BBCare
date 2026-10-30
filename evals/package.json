@@ -6,6 +6,7 @@
   "scripts": {
     "eval": "tsx run.ts",
     "eval:retrieval": "tsx run.ts --retrieval-only",
+    "eval:router": "tsx router.ts",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "tsx run.ts --retrieval-only --no-record"

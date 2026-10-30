@@ -1,6 +1,22 @@
 # Integration Plan: Existing Flask AI Service
 
-**Status:** Prepared, live integration BLOCKED (no private network path from the cloud development environment to the owner's server; see `docs/status/blockers.md` B-01 to B-03).
+**Status:** Gateway side in progress (2026-10-30). Antigravity implements, hosts and tests the Flask AI gateway on the owner's server and pushes to `claude/festive-einstein-3g612s`. BBCare (this codebase) owns only the application side: the existing `FlaskAiProvider`, the contract in `flask-gateway-contract.md`, the `gateway-check` acceptance script, the router evaluation gate (`pnpm --filter @bbcare/evals eval:router`) and host configuration. BBCare does not create a Flask service and does not edit the gateway's or the server's infrastructure files.
+
+## Division of work
+| Antigravity (server side) | BBCare (application side) |
+|---|---|
+| Flask gateway code, bearer-token check, model backend, private-interface binding | `FlaskAiProvider` adapter, private-host refusal, timeouts, circuit breaker |
+| Hosting, process management, server testing | `gateway-check` acceptance run from the BBCare host |
+| Push of gateway files to the shared branch | Inspect the push, confirm the contract, adjust configuration (paths, model name) |
+| | Router evaluation gate, model registration in Admin, AI, flags kept off |
+
+## Sequence once Antigravity's push lands
+1. Inspect the pushed gateway against `flask-gateway-contract.md`: routes, auth, request and response shapes, bind address.
+2. On the BBCare host, set the `BBCARE_FLASK_AI_*` values (see `.env.example`), then run `pnpm --filter @bbcare/ai gateway-check`. All checks must pass.
+3. Admin, AI: health shows reachable; register the gateway's chat model with its licence note.
+4. Run `BBCARE_AI_PROVIDER=flask pnpm --filter @bbcare/evals eval:router` and `pnpm --filter @bbcare/evals eval`; a bilingual reviewer reads the English and Malay answers.
+5. Owner decision on activation. Until then `ai_answers.en` and `ai_answers.ms` stay off and the site runs search-first.
+
 
 ## Principles
 - The existing server and Flask service are not replaced, reinstalled or modified by BBCare work.
