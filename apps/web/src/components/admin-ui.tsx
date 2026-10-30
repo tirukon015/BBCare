@@ -58,7 +58,8 @@ export function AdminShell({ user, children, title, actions }: { user: StaffUser
 
 export function Table({ head, children, empty }: { head: string[]; children: ReactNode; empty?: boolean }) {
   return (
-    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-white">
+    // Wide tables scroll sideways; the scroll region is keyboard reachable (WCAG 2.1.1, axe scrollable-region-focusable).
+    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-white" tabIndex={0} role="region" aria-label={`${head[0] ?? "Table"} table`}>
       <table className="min-w-full text-left text-sm">
         <thead className="border-b border-line bg-sand text-xs uppercase tracking-wide text-muted">
           <tr>{head.map((h) => <th key={h} scope="col" className="px-3 py-2 font-medium">{h}</th>)}</tr>

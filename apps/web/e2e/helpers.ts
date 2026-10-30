@@ -70,7 +70,11 @@ export async function expectNoHorizontalScroll(page: Page) {
   expect(overflow, "page should not scroll horizontally").toBeLessThanOrEqual(1);
 }
 
+/** Choose "Essential only" when the banner is shown. The banner renders after hydration, so wait for it unless a choice is already stored. */
 export async function acceptEssentialOnly(page: Page) {
+  const chosen = (await page.context().cookies()).some((c) => c.name === "bbcare_consent");
+  if (chosen) return;
   const reject = page.getByTestId("consent-reject");
+  await reject.waitFor({ state: "visible", timeout: 15_000 }).catch(() => {});
   if (await reject.isVisible().catch(() => false)) await reject.click();
 }
