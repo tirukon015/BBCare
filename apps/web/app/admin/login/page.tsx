@@ -13,7 +13,7 @@ async function loginAction(form: FormData) {
   "use server";
   const ip = clientIpFrom(await headers());
   if (!(await rateLimit("login", ip))) redirect("/admin/login?e=rate");
-  const parsed = z.object({ email: z.email().max(200), password: z.string().min(1).max(200) }).safeParse({ email: form.get("email"), password: form.get("password") });
+  const parsed = z.object({ email: z.string().min(1).max(200), password: z.string().min(1).max(200) }).safeParse({ email: form.get("email"), password: form.get("password") });
   if (!parsed.success) redirect("/admin/login?e=invalid");
   const r = await login(parsed.data.email, parsed.data.password);
   if (!r.ok) redirect(`/admin/login?e=${r.reason}`);
@@ -39,8 +39,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       {e && MESSAGES[e] ? <p role="alert" className="mb-4 rounded-lg border border-danger-soft bg-danger-soft px-3 py-2 text-sm text-danger">{MESSAGES[e]}</p> : null}
       <form action={loginAction} className="space-y-4">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="email" className="text-sm font-medium">Email</label>
-          <input id="email" name="email" type="email" autoComplete="username" required className={adminInput} />
+          <label htmlFor="email" className="text-sm font-medium">Email or Username</label>
+          <input id="email" name="email" type="text" autoComplete="username" required className={adminInput} />
         </div>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="password" className="text-sm font-medium">Password</label>
