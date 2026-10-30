@@ -1,6 +1,6 @@
 # Integration Plan: Existing Flask AI Service
 
-**Status:** Gateway side in progress (2026-10-30). Antigravity implements, hosts and tests the Flask AI gateway on the owner's server and pushes to `claude/festive-einstein-3g612s`. BBCare (this codebase) owns only the application side: the existing `FlaskAiProvider`, the contract in `flask-gateway-contract.md`, the `gateway-check` acceptance script, the router evaluation gate (`pnpm --filter @bbcare/evals eval:router`) and host configuration. BBCare does not create a Flask service and does not edit the gateway's or the server's infrastructure files.
+**Status:** Gateway implemented, verified and hosted locally by Antigravity at `127.0.0.1:5001`. Ready for BBCare configuration and acceptance.
 
 ## Division of work
 | Antigravity (server side) | BBCare (application side) |
@@ -17,12 +17,21 @@
 4. Run `BBCARE_AI_PROVIDER=flask pnpm --filter @bbcare/evals eval:router` and `pnpm --filter @bbcare/evals eval`; a bilingual reviewer reads the English and Malay answers.
 5. Owner decision on activation. Until then `ai_answers.en` and `ai_answers.ms` stay off and the site runs search-first.
 
-
 ## Principles
-- The existing server and Flask service are not replaced, reinstalled or modified by BBCare work.
+- The existing server and Ollama daemon are not replaced, reinstalled or modified by BBCare work.
 - BBCare calls the Flask service only over a private network with a bearer token. The service is never exposed to the public internet.
 - The BBCare website works without the AI service (search-first mode). AI answers stay off until the owner approves activation.
 - No customer conversation is used to train models. Only the current session's recent messages and published knowledge are sent.
+
+## Gateway Implementation (`infra/flask-ai-service`)
+- Hosted on host: `127.0.0.1:5001` (managed via `systemd --user` as `bbcare-ai-gateway.service`).
+- Python virtual environment: `infra/flask-ai-service/.venv`.
+- Upstream: Ollama daemon on `127.0.0.1:11434`.
+- Primary evaluated model: `qwen2.5:7b` (Q4_K_M).
+- Secondary model: `qwen2.5:3b` (Q4_K_M).
+- Authentication: Mandatory `Authorization: Bearer <token>` validated in constant time.
+- Resource protection: Concurrency semaphore (max 2 concurrent inference jobs), 90s timeout.
+- Privacy & logging: Structured JSON logs without request prompts, customer questions, or secrets.
 
 ## Step 1: read-only audit (owner action)
 Run on the server as a normal user (no sudo needed):

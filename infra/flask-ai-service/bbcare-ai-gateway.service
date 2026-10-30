@@ -1,0 +1,16 @@
+[Unit]
+Description=BBCare Local AI Gateway (Flask proxy to private Ollama)
+After=network.target ollama.service
+
+[Service]
+Type=simple
+WorkingDirectory=/data/projects/bbcare/infra/flask-ai-service
+EnvironmentFile=/data/projects/bbcare/infra/flask-ai-service/.env
+ExecStart=/data/projects/bbcare/infra/flask-ai-service/.venv/bin/gunicorn --bind 127.0.0.1:5001 --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile - app:app
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
