@@ -83,3 +83,6 @@ No customer-ready model-specific guidance: 0 of 13 draft flows verified, because
 - Regression tests: database upgrade from an old seeded database, fresh database after migrations, code catalogue equals the SQL data migration; e2e homepage in English and Malay on desktop, Android, iPhone and iPad asserting all seven cards, codes, per-model placeholders and links.
 - Screenshots: `docs/screenshots/router-home-en-desktop.png`, `docs/screenshots/router-home-ms-android.png`.
 - Existing Codespace: restart it (or run `pnpm db:migrate && pnpm db:seed`) to apply migration 0004.
+
+## Homepage catalogue verification (2026-10-30, commit 10cdb22)
+Verified in a real browser (production build) against a database created by the pre-router code and then upgraded, the situation that produced the owner's empty-section screenshot. English and Malay, desktop (1280 px) and phone (Pixel 7): 7 of 7 cards visible, correct names and ECR codes, each card links to its own model page, each model page shows exactly Mesh and AP, mesh lists 7 scenarios and AP 5, an unverified scenario shows the "no verified guide" notice, the no-secrets notice and the staff form while "Change model" keeps the catalogue reachable, no horizontal scroll. Screenshots in `docs/screenshots/router-journey/` (homepage, model, mode and problem pages, both languages, both layouts).
