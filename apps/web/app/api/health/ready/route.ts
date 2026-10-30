@@ -1,5 +1,6 @@
 import { ROUTER_ECR_CODES } from "@bbcare/core";
 import { db } from "@/lib/db";
+import { geoStatus } from "@/lib/geo";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export async function GET() {
                WHERE m.ecr_code IS NOT NULL AND m.status = 'active' AND c.slug = 'router' AND c.active) AS routers`;
     const complete = (row?.routers ?? 0) === ROUTER_ECR_CODES.length;
     return Response.json(
-      { status: complete ? "ready" : "router_catalogue_incomplete", migrations: row?.n ?? 0, routerModels: row?.routers ?? 0 },
+      { status: complete ? "ready" : "router_catalogue_incomplete", migrations: row?.n ?? 0, routerModels: row?.routers ?? 0, geo: geoStatus().ranges > 0 ? "configured" : "not_configured" },
       { status: complete ? 200 : 503, headers: { "cache-control": "no-store" } });
   } catch {
     return Response.json({ status: "not_ready" }, { status: 503, headers: { "cache-control": "no-store" } });

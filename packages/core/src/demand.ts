@@ -70,7 +70,7 @@ export function classifyChannel(touch: Touch | undefined, ownHosts: string[] = [
   const source = touch.utm_source?.toLowerCase() ?? "";
   const medium = touch.utm_medium?.toLowerCase() ?? "";
   if (/shopee/.test(source)) return { channel: "shopee", detail: null, evidence: "utm" };
-  if (medium === "qr" || medium === "qr_code" || medium === "qrcode") return { channel: "qr_code", detail: null, evidence: "utm" };
+  if (medium === "qr" || medium === "qr_code" || medium === "qrcode" || source === "qr" || source === "qr_code" || source === "qrcode") return { channel: "qr_code", detail: null, evidence: "utm" };
   const host = hostOf(touch.referrer);
   if (host) {
     if (SHOPEE_HOSTS.test(host)) return { channel: "shopee", detail: null, evidence: "referrer" };

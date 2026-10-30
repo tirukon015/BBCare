@@ -72,7 +72,9 @@ test.describe("customer analytics and intelligence", () => {
     await admin.goto("/admin/analytics/settings");
     await expect(admin.getByTestId("tracking-status")).toBeVisible();
     await expect(admin.getByTestId("tracking-feature").filter({ hasText: "Click heatmap grid" })).toContainText("Yes (");
-    await expect(admin.getByTestId("tracking-feature").filter({ hasText: "Approximate location" })).toContainText("BBCARE_GEOIP_CSV");
+    // The test environment ships a synthetic geolocation fixture, so location shows as configured and collecting.
+    await expect(admin.getByTestId("tracking-feature").filter({ hasText: "Approximate location" })).toContainText("Yes (");
+    await expect(admin.getByTestId("tracking-feature").filter({ hasText: "Approximate city" })).toContainText("Per visitor choice");
     for (const path of ["visitors", "behaviour", "media"]) {
       await admin.goto(`/admin/analytics/${path}?range=7`);
       await expect(admin.getByRole("navigation", { name: "Customer Analytics and Intelligence" })).toBeVisible();

@@ -12,6 +12,8 @@ describe("support channel classification", () => {
   it("reads UTM source and medium", () => {
     expect(classifyChannel({ utm_source: "Shopee", utm_medium: "listing" }, own)).toMatchObject({ channel: "shopee", evidence: "utm" });
     expect(classifyChannel({ utm_source: "poster", utm_medium: "qr" }, own)).toMatchObject({ channel: "qr_code", evidence: "utm" });
+    expect(classifyChannel({ utm_source: "qr", utm_medium: "offline", utm_campaign: "router_support" }, own)).toMatchObject({ channel: "qr_code", evidence: "utm" });
+    expect(classifyChannel({ utm_source: "shopee", utm_medium: "referral", utm_campaign: "bbcare_support" }, own)).toMatchObject({ channel: "shopee", evidence: "utm" });
   });
   it("reads the referrer host but keeps only the host", () => {
     expect(classifyChannel({ referrer: "https://shopee.com.my/bbtech.shop?x=secret" }, own)).toMatchObject({ channel: "shopee", evidence: "referrer" });

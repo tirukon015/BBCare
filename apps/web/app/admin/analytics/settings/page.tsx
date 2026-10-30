@@ -17,7 +17,10 @@ const FEATURES: Feature[] = [
   { name: "Consented visitor id (returning visitors)", events: ["page_view"], consent: "analytics", dashboard: "Visitors & Sessions", config: null, note: "Random id for 180 days, only after the visitor allows analytics." },
   { name: "Traffic source and channel labels", events: ["session_started"], consent: "none", dashboard: "Traffic Sources, Campaign Analytics", config: null, note: "From ?ch=, UTM parameters and referrer host only." },
   { name: "Campaign parameters (utm_content, utm_term)", events: ["session_started"], consent: "none", dashboard: "Campaign Analytics", config: null, note: "Stored as sent on the link." },
-  { name: "Approximate location (state, country)", events: ["page_view"], consent: "none", dashboard: "Visitors & Sessions", config: "BBCARE_GEOIP_CSV", note: "Offline database; raw IP is never stored; small areas hidden." },
+  { name: "Approximate location (state, country)", events: ["session_started"], consent: "none", dashboard: "Geographic Analytics, Visitors & Sessions", config: "BBCARE_GEOIP_CSV", note: "Offline database; raw IP is never stored; areas under 10 sessions hidden." },
+  { name: "Approximate city", events: ["session_started"], consent: "analytics", dashboard: "Geographic Analytics", config: "BBCARE_GEOIP_CSV", note: "Only with analytics consent, only for Malaysian ranges with a known state." },
+  { name: "Assistant opened and AI availability", events: ["assistant_opened", "ai_unavailable"], consent: "none", dashboard: "Geographic Analytics, Support Analytics", config: null, note: "Entry point and whether a router was known; never message text." },
+  { name: "Troubleshooting steps viewed", events: ["flow_step_viewed"], consent: "none", dashboard: "Router Analytics, Customer Journey", config: null, note: "" },
   { name: "Tagged clicks (navigation, buttons, cards)", events: ["ui_click"], consent: "none", dashboard: "Website Behaviour", config: null, note: "Element key only." },
   { name: "Click heatmap grid", events: ["click_area"], consent: "none", dashboard: "Heatmaps", config: null, note: "10 percent grid cell and element kind; no coordinates, text or recordings." },
   { name: "Exits and scroll depth bucket", events: ["navigation_exit"], consent: "none", dashboard: "Website Behaviour, Heatmaps", config: null, note: "Page type and scroll quarter." },
@@ -51,8 +54,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         {FEATURES.map((f) => {
           const n = f.events.reduce((a, e) => a + (s.counts.get(e) ?? 0), 0);
           const configured = f.config ? (f.config === "BBCARE_GEOIP_CSV" ? s.geoConfigured : false) : true;
-          const enabled = f.consent === "analytics" ? "Per visitor choice" : configured ? "Yes" : "No";
-          const collecting = f.consent === "analytics" ? `${s.consent.analytics} consenting visitors` : configured ? (n > 0 ? `Yes (${n})` : "No events in 24h") : "No (not configured)";
+          const consentNeeded = f.consent === "analytics";
+          const enabled = !configured ? "No" : consentNeeded ? "Per visitor choice" : "Yes";
+          const collecting = !configured ? "No (not configured)" : consentNeeded ? `${s.consent.analytics} consenting visitors` : n > 0 ? `Yes (${n})` : "No events in 24h";
           return (
             <tr key={f.name} data-testid="tracking-feature">
               <Td><span className="font-medium">{f.name}</span>{f.note ? <span className="block text-xs text-muted">{f.note}</span> : null}<span className="block font-mono text-[11px] text-muted">{f.events.join(", ")}</span></Td>

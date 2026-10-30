@@ -1,7 +1,7 @@
 import "server-only";
 import { classifyChannel, classifyUserAgent, referrerDomain, sanitizePath, scrubPersonalData, type ValidatedEvent } from "@bbcare/core";
 import { db } from "@/lib/db";
-import { lookupRegion } from "@/lib/geo";
+import { lookupGeo } from "@/lib/geo";
 
 const TEXT_PROPS = ["query"] as const;
 
@@ -9,7 +9,8 @@ const TEXT_PROPS = ["query"] as const;
 export async function ingestEvents(events: ValidatedEvent[], ctx: { ip: string; userAgent: string; consent: "analytics" | "essential"; ownHosts?: string[] }) {
   const ua = classifyUserAgent(ctx.userAgent);
   if (ua.deviceCategory === "bot" || events.length === 0) return 0;
-  const geo = lookupRegion(ctx.ip);
+  // The address is resolved in memory and never stored. State for everyone (aggregate only); city only with analytics consent.
+  const geo = lookupGeo(ctx.ip);
   const rows = events.map((e) => {
     const props = { ...e.props };
     for (const k of TEXT_PROPS) if (typeof props[k] === "string") props[k] = scrubPersonalData(props[k] as string).slice(0, 200);
@@ -37,6 +38,7 @@ export async function ingestEvents(events: ValidatedEvent[], ctx: { ip: string; 
       os_family: ua.osFamily,
       country: geo.country,
       region: geo.region,
+      city: ctx.consent === "analytics" ? geo.city : null,
       props,
     };
   });

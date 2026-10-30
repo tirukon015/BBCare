@@ -98,6 +98,55 @@ export async function rollupDay(sql: Sql, day: string): Promise<number> {
         UNION ALL SELECT 'campaign_escalated', c.utm_campaign, count(*) FILTER (WHERE a.escalated) FROM c JOIN a USING (session_id) WHERE c.utm_campaign IS NOT NULL GROUP BY c.utm_campaign
       ) m WHERE m.n > 0
       ON CONFLICT (day, metric, dim1, dim2) DO UPDATE SET value = EXCLUDED.value`;
+    // Geography: one state (or country) per session, taken from the first event of the session on the
+    // day, then what that session did. Counts only; no coordinates, no addresses.
+    await tx`
+      WITH g AS (SELECT DISTINCT ON (session_id) session_id, COALESCE(country, '') AS country, COALESCE(region, '') AS region, COALESCE(city, '') AS city, visitor_id, COALESCE(channel, 'unknown') AS channel
+                 FROM analytics.events WHERE received_at >= ${day}::date AND received_at < ${day}::date + 1 ORDER BY session_id, occurred_at),
+           a AS (SELECT session_id,
+                   count(*) FILTER (WHERE name = 'page_view') AS page_views,
+                   bool_or(name = 'session_started' AND NOT EXISTS (SELECT 1 FROM analytics.events p WHERE p.session_id = e.session_id AND p.received_at < ${day}::date)) AS new_session,
+                   bool_or(name = 'router_model_selected') AS router,
+                   bool_or(name = 'router_mode_selected' AND props->>'mode' = 'mesh') AS mesh,
+                   bool_or(name = 'router_scenario_selected') AS problem,
+                   bool_or(name = 'support_started') AS ai_chat,
+                   bool_or(name = 'escalation_submitted') AS escalated,
+                   bool_or(name = 'resource_open') AS media,
+                   bool_or(name = 'resource_open' AND props->>'kind' = 'video') AS video,
+                   bool_or(name = 'flow_step' AND props->>'action' = 'resolved') AS completed
+                 FROM analytics.events e WHERE received_at >= ${day}::date AND received_at < ${day}::date + 1 GROUP BY session_id)
+      INSERT INTO analytics.agg_daily (day, metric, dim1, dim2, value)
+      SELECT ${day}::date, m.metric, m.dim1, m.dim2, m.n FROM (
+        SELECT 'geo_sessions' AS metric, g.country AS dim1, g.region AS dim2, count(*) AS n FROM g GROUP BY 1, 2, 3
+        UNION ALL SELECT 'geo_visitors', g.country, g.region, count(DISTINCT g.visitor_id) FROM g WHERE g.visitor_id IS NOT NULL GROUP BY 2, 3
+        UNION ALL SELECT 'geo_new_sessions', g.country, g.region, count(*) FROM g JOIN a USING (session_id) WHERE a.new_session GROUP BY 2, 3
+        UNION ALL SELECT 'geo_page_views', g.country, g.region, sum(a.page_views) FROM g JOIN a USING (session_id) GROUP BY 2, 3
+        UNION ALL SELECT 'geo_router', g.region, '', count(*) FROM g JOIN a USING (session_id) WHERE g.country = 'MY' AND a.router GROUP BY 2
+        UNION ALL SELECT 'geo_mesh', g.region, '', count(*) FROM g JOIN a USING (session_id) WHERE g.country = 'MY' AND a.mesh GROUP BY 2
+        UNION ALL SELECT 'geo_problem', g.region, '', count(*) FROM g JOIN a USING (session_id) WHERE g.country = 'MY' AND a.problem GROUP BY 2
+        UNION ALL SELECT 'geo_ai', g.region, '', count(*) FROM g JOIN a USING (session_id) WHERE g.country = 'MY' AND a.ai_chat GROUP BY 2
+        UNION ALL SELECT 'geo_escalated', g.region, '', count(*) FROM g JOIN a USING (session_id) WHERE g.country = 'MY' AND a.escalated GROUP BY 2
+        UNION ALL SELECT 'geo_media', g.region, '', count(*) FROM g JOIN a USING (session_id) WHERE g.country = 'MY' AND a.media GROUP BY 2
+        UNION ALL SELECT 'geo_video', g.region, '', count(*) FROM g JOIN a USING (session_id) WHERE g.country = 'MY' AND a.video GROUP BY 2
+        UNION ALL SELECT 'geo_completed', g.region, '', count(*) FROM g JOIN a USING (session_id) WHERE g.country = 'MY' AND a.completed GROUP BY 2
+        UNION ALL SELECT 'geo_city', g.region, g.city, count(*) FROM g WHERE g.country = 'MY' AND g.region <> '' AND g.city <> '' GROUP BY 2, 3
+        UNION ALL SELECT 'geo_source', g.region, g.channel, count(*) FROM g WHERE g.country = 'MY' GROUP BY 2, 3
+        UNION ALL SELECT 'geo_model', g.region, x.model_id, count(DISTINCT x.session_id) FROM g JOIN (
+            SELECT session_id, props->>'model_id' AS model_id FROM analytics.events WHERE received_at >= ${day}::date AND received_at < ${day}::date + 1 AND name = 'router_model_selected') x USING (session_id)
+          WHERE g.country = 'MY' AND x.model_id IS NOT NULL GROUP BY 2, 3
+        UNION ALL SELECT 'geo_scenario', g.region, (x.props->>'mode') || ':' || (x.props->>'scenario'), count(DISTINCT x.session_id) FROM g JOIN (
+            SELECT session_id, props FROM analytics.events WHERE received_at >= ${day}::date AND received_at < ${day}::date + 1 AND name = 'router_scenario_selected') x USING (session_id)
+          WHERE g.country = 'MY' GROUP BY 2, 3
+      ) m WHERE m.n > 0
+      ON CONFLICT (day, metric, dim1, dim2) DO UPDATE SET value = EXCLUDED.value`;
+    // Support cases per state, from the cases table joined to the session's geography when known.
+    await tx`
+      INSERT INTO analytics.agg_daily (day, metric, dim1, dim2, value)
+      SELECT ${day}::date, 'geo_cases', COALESCE(g.region, ''), '', count(*) FROM support.cases c
+      LEFT JOIN LATERAL (SELECT region FROM analytics.events ev WHERE ev.country = 'MY' AND ev.name = 'escalation_submitted'
+                           AND ev.received_at >= c.created_at - interval '10 minutes' AND ev.received_at <= c.created_at + interval '10 minutes' LIMIT 1) g ON true
+      WHERE c.created_at >= ${day}::date AND c.created_at < ${day}::date + 1 GROUP BY COALESCE(g.region, '')
+      ON CONFLICT (day, metric, dim1, dim2) DO UPDATE SET value = EXCLUDED.value`;
     // Commerce impressions and clicks from the recommendations table (server-side truth).
     await tx`
       INSERT INTO analytics.agg_daily (day, metric, dim1, dim2, value)

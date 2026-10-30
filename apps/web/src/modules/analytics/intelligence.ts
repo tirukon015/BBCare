@@ -2,6 +2,7 @@ import "server-only";
 import { GEO_SUPPRESSION_THRESHOLD, MY_REGIONS, SCENARIOS, sourceGroup, type SourceGroup, type SupportChannel } from "@bbcare/core";
 import { rollupDay } from "@bbcare/db";
 import { db } from "@/lib/db";
+import { geoStatus } from "@/lib/geo";
 
 /**
  * Customer Analytics and Intelligence: reads the daily aggregates (analytics.agg_daily) for a
@@ -324,5 +325,92 @@ export async function trackingStatus() {
   const [agg] = await sql<{ last_day: string | null; rows: number }[]>`SELECT max(day)::text AS last_day, count(*)::int AS rows FROM analytics.agg_daily`;
   const [attr] = await sql<{ n: number; known: number }[]>`SELECT count(*)::int AS n, count(*) FILTER (WHERE channel <> 'unknown')::int AS known FROM support.attribution WHERE created_at > now() - interval '30 days'`;
   const [lastJob] = await sql<{ queue: string; finished_at: Date | null }[]>`SELECT queue, max(finished_at) AS finished_at FROM ops.jobs WHERE queue IN ('rollup_day', 'retention') AND status = 'done' GROUP BY queue ORDER BY finished_at DESC NULLS LAST LIMIT 1`;
-  return { counts, consent: consent ?? { total: 0, analytics: 0, last: null }, agg: agg ?? { last_day: null, rows: 0 }, attribution: attr ?? { n: 0, known: 0 }, lastJob: lastJob ?? null, geoConfigured: !!process.env.BBCARE_GEOIP_CSV };
+  return { counts, consent: consent ?? { total: 0, analytics: 0, last: null }, agg: agg ?? { last_day: null, rows: 0 }, attribution: attr ?? { n: 0, known: 0 }, lastJob: lastJob ?? null, geoConfigured: geoStatus().ranges > 0 };
+}
+
+// ---------------------------------------------------------------------------
+// Geography: state-level aggregates for the Malaysia map. Counts only; cells under the suppression
+// threshold are reported as suppressed so the map never shows a handful of people in a small area.
+// ---------------------------------------------------------------------------
+
+export interface GeoStateRow {
+  code: string; name: string; sessions: number; previous: number; visitors: number; newSessions: number; pageViews: number;
+  router: number; mesh: number; problem: number; ai: number; escalated: number; cases: number; media: number; video: number; completed: number; suppressed: boolean;
+}
+
+async function geoMetricByRegion(metric: string, p: Period): Promise<Map<string, number>> {
+  const rows = await db()<{ key: string; value: number }[]>`
+    SELECT dim1 AS key, sum(value)::int AS value FROM analytics.agg_daily WHERE metric = ${metric} AND day >= ${p.from}::date AND day <= ${p.to}::date GROUP BY dim1`;
+  return new Map(rows.map((r) => [r.key, r.value]));
+}
+
+/** National overview: every Malaysian state plus countries and the unknown share. */
+export async function geoSummary(p: Period) {
+  const sql = db();
+  const sessionRows = await sql<{ country: string; region: string; value: number }[]>`
+    SELECT dim1 AS country, dim2 AS region, sum(value)::int AS value FROM analytics.agg_daily WHERE metric = 'geo_sessions' AND day >= ${p.from}::date AND day <= ${p.to}::date GROUP BY dim1, dim2`;
+  const prevRows = await sql<{ country: string; region: string; value: number }[]>`
+    SELECT dim1 AS country, dim2 AS region, sum(value)::int AS value FROM analytics.agg_daily WHERE metric = 'geo_sessions' AND day >= ${p.prevFrom}::date AND day <= ${p.prevTo}::date GROUP BY dim1, dim2`;
+  const byRegion = async (metric: string) => geoMetricByRegion(metric, p);
+  const [visitors, newSessions, pageViews, router, mesh, problem, ai, escalated, cases, media, video, completed] = await Promise.all([
+    sql<{ key: string; value: number }[]>`SELECT dim2 AS key, sum(value)::int AS value FROM analytics.agg_daily WHERE metric = 'geo_visitors' AND dim1 = 'MY' AND day >= ${p.from}::date AND day <= ${p.to}::date GROUP BY dim2`.then((r) => new Map(r.map((x) => [x.key, x.value]))),
+    sql<{ key: string; value: number }[]>`SELECT dim2 AS key, sum(value)::int AS value FROM analytics.agg_daily WHERE metric = 'geo_new_sessions' AND dim1 = 'MY' AND day >= ${p.from}::date AND day <= ${p.to}::date GROUP BY dim2`.then((r) => new Map(r.map((x) => [x.key, x.value]))),
+    sql<{ key: string; value: number }[]>`SELECT dim2 AS key, sum(value)::int AS value FROM analytics.agg_daily WHERE metric = 'geo_page_views' AND dim1 = 'MY' AND day >= ${p.from}::date AND day <= ${p.to}::date GROUP BY dim2`.then((r) => new Map(r.map((x) => [x.key, x.value]))),
+    byRegion("geo_router"), byRegion("geo_mesh"), byRegion("geo_problem"), byRegion("geo_ai"), byRegion("geo_escalated"), byRegion("geo_cases"), byRegion("geo_media"), byRegion("geo_video"), byRegion("geo_completed"),
+  ]);
+  const my = new Map<string, number>(); const prevMy = new Map<string, number>();
+  const countries = new Map<string, number>();
+  let unknown = 0; let total = 0;
+  for (const r of sessionRows) {
+    total += r.value;
+    if (r.country === "MY") my.set(r.region, (my.get(r.region) ?? 0) + r.value);
+    else if (!r.country) unknown += r.value;
+    else countries.set(r.country, (countries.get(r.country) ?? 0) + r.value);
+  }
+  for (const r of prevRows) if (r.country === "MY") prevMy.set(r.region, (prevMy.get(r.region) ?? 0) + r.value);
+  const myUnknownState = my.get("") ?? 0;
+  const states: GeoStateRow[] = Object.entries(MY_REGIONS).map(([code, name]) => {
+    const sessions = my.get(code) ?? 0;
+    return {
+      code, name, sessions, previous: prevMy.get(code) ?? 0, visitors: visitors.get(code) ?? 0, newSessions: newSessions.get(code) ?? 0, pageViews: pageViews.get(code) ?? 0,
+      router: router.get(code) ?? 0, mesh: mesh.get(code) ?? 0, problem: problem.get(code) ?? 0, ai: ai.get(code) ?? 0, escalated: escalated.get(code) ?? 0, cases: cases.get(code) ?? 0,
+      media: media.get(code) ?? 0, video: video.get(code) ?? 0, completed: completed.get(code) ?? 0, suppressed: sessions > 0 && sessions < GEO_SUPPRESSION_THRESHOLD,
+    };
+  });
+  const malaysia = states.reduce((a, s) => a + s.sessions, 0) + myUnknownState;
+  return {
+    period: p, states, totalSessions: total, malaysiaSessions: malaysia, malaysiaStateUnknown: myUnknownState, unknownSessions: unknown,
+    countries: [...countries.entries()].map(([country, sessions]) => ({ country, sessions })).sort((a, b) => b.sessions - a.sessions).slice(0, 15),
+    hasData: total > 0,
+  };
+}
+
+/** Drill-down for one state: what those sessions did, their routers, problems, sources and cities (suppressed under the threshold). */
+export async function geoRegion(p: Period, code: string) {
+  if (!(code in MY_REGIONS)) return null;
+  const sql = db();
+  const sum = async (metric: string, from = p.from, to = p.to, dim: "dim1" | "dim2" = "dim1") => {
+    const [r] = dim === "dim1"
+      ? await sql<{ v: number }[]>`SELECT COALESCE(sum(value), 0)::int AS v FROM analytics.agg_daily WHERE metric = ${metric} AND dim1 = ${code} AND day >= ${from}::date AND day <= ${to}::date`
+      : await sql<{ v: number }[]>`SELECT COALESCE(sum(value), 0)::int AS v FROM analytics.agg_daily WHERE metric = ${metric} AND dim1 = 'MY' AND dim2 = ${code} AND day >= ${from}::date AND day <= ${to}::date`;
+    return r?.v ?? 0;
+  };
+  const dims = async (metric: string, limit = 8) => [...(await sql<{ key: string; value: number }[]>`
+    SELECT dim2 AS key, sum(value)::int AS value FROM analytics.agg_daily WHERE metric = ${metric} AND dim1 = ${code} AND day >= ${p.from}::date AND day <= ${p.to}::date GROUP BY dim2 ORDER BY value DESC LIMIT ${limit}`)];
+  const [sessions, prevSessions, visitors, newSessions, pageViews, router, mesh, problem, ai, escalated, cases, media, video, completed, models, scenarios, sources, cities] = await Promise.all([
+    sum("geo_sessions", p.from, p.to, "dim2"), sum("geo_sessions", p.prevFrom, p.prevTo, "dim2"), sum("geo_visitors", p.from, p.to, "dim2"), sum("geo_new_sessions", p.from, p.to, "dim2"), sum("geo_page_views", p.from, p.to, "dim2"),
+    sum("geo_router"), sum("geo_mesh"), sum("geo_problem"), sum("geo_ai"), sum("geo_escalated"), sum("geo_cases"), sum("geo_media"), sum("geo_video"), sum("geo_completed"),
+    dims("geo_model"), dims("geo_scenario"), dims("geo_source", 12), dims("geo_city", 15),
+  ]);
+  const names = await modelNames(models.map((m) => m.key).filter(isUuid));
+  return {
+    code, name: MY_REGIONS[code]!, period: p,
+    sessions: compare(sessions, prevSessions), visitors, newSessions, returningSessions: sessions - newSessions, pageViews, router, mesh, problem, ai, escalated, cases, media, video, completed,
+    completionRate: problem ? Math.round((completed / problem) * 100) : null, escalationRate: problem ? Math.round((escalated / problem) * 100) : null,
+    suppressed: sessions > 0 && sessions < GEO_SUPPRESSION_THRESHOLD,
+    topModels: models.map((m) => { const n = names.get(m.key); return { label: n ? `${n.name} (ECR ${n.ecr ?? "-"})` : "unknown", value: m.value }; }),
+    topScenarios: scenarios.map((s) => ({ label: scenarioTitle(s.key), value: s.value })),
+    topSources: sources.map((s) => ({ label: s.key, value: s.value })),
+    cities: cities.map((c) => ({ label: c.key, value: c.value, suppressed: c.value < GEO_SUPPRESSION_THRESHOLD })),
+  };
 }

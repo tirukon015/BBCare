@@ -8,6 +8,7 @@ export const ANALYTICS_SECTIONS = [
   { href: "/admin/analytics", label: "Overview" },
   { href: "/admin/analytics/sources", label: "Traffic Sources" },
   { href: "/admin/analytics/visitors", label: "Visitors & Sessions" },
+  { href: "/admin/analytics/geo", label: "Geographic Analytics" },
   { href: "/admin/analytics/behaviour", label: "Website Behaviour" },
   { href: "/admin/analytics/journey", label: "Customer Journey" },
   { href: "/admin/analytics/heatmaps", label: "Heatmaps" },

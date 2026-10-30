@@ -158,6 +158,56 @@ d("database integration (real Postgres)", () => {
     await sql`DELETE FROM analytics.events WHERE session_id IN (${sid}, ${sid2})`;
   });
 
+  it("aggregates sessions by Malaysian state and country, without storing addresses or coordinates", async () => {
+    const [model] = await sql<{ id: string }[]>`SELECT id::text FROM catalog.product_models WHERE slug = 'tp-link-ex510'`;
+    const t = (sec: number) => new Date(Date.now() - 120_000 + sec * 1000);
+    const ins = (sid: string, name: string, props: Record<string, unknown>, extra: Record<string, unknown>) =>
+      sql`INSERT INTO analytics.events ${sql({ id: crypto.randomUUID(), name, occurred_at: t(Math.random() * 60), session_id: sid, consent: "essential", page_type: "home", device_category: "mobile", props: sql.json(props as never), ...extra })}`;
+    // Synthetic sessions: three in Selangor (one with a consented city), one in Kuala Lumpur, one in Singapore, one unknown.
+    for (const [sid, extra] of [
+      ["geo-sel-1", { country: "MY", region: "MY-10", city: "Shah Alam", consent: "analytics", visitor_id: "geo-visitor-1", channel: "shopee" }],
+      ["geo-sel-2", { country: "MY", region: "MY-10", channel: "unknown" }], ["geo-sel-3", { country: "MY", region: "MY-10", channel: "qr_code" }],
+      ["geo-kl-1", { country: "MY", region: "MY-14", channel: "unknown" }], ["geo-sg-1", { country: "SG", channel: "unknown" }], ["geo-unknown-1", { channel: "unknown" }],
+    ] as [string, Record<string, unknown>][]) {
+      await ins(sid, "session_started", {}, extra);
+      await ins(sid, "page_view", { landing: true }, extra);
+    }
+    await ins("geo-sel-1", "router_model_selected", { model_id: model!.id, ecr: "EX5" }, { country: "MY", region: "MY-10" });
+    await ins("geo-sel-1", "router_mode_selected", { model_id: model!.id, mode: "mesh" }, { country: "MY", region: "MY-10" });
+    await ins("geo-sel-1", "router_scenario_selected", { model_id: model!.id, mode: "mesh", scenario: "mesh_pairing", verified: false }, { country: "MY", region: "MY-10" });
+    await ins("geo-sel-2", "support_started", { support_session: "geo-chat-1" }, { country: "MY", region: "MY-10" });
+    await ins("geo-sel-2", "escalation_submitted", { origin: "chat" }, { country: "MY", region: "MY-10" });
+    const day = new Date().toISOString().slice(0, 10);
+    await rollupDay(sql, day);
+    const rows = await sql<{ metric: string; dim1: string; dim2: string; value: number }[]>`SELECT metric, dim1, dim2, value::int FROM analytics.agg_daily WHERE day = ${day}::date AND metric LIKE 'geo_%'`;
+    const get = (metric: string, dim1: string, dim2 = "") => rows.find((r) => r.metric === metric && r.dim1 === dim1 && r.dim2 === dim2)?.value ?? 0;
+    expect(get("geo_sessions", "MY", "MY-10")).toBe(3);
+    expect(get("geo_sessions", "MY", "MY-14")).toBe(1);
+    expect(get("geo_sessions", "SG", "")).toBe(1);
+    expect(get("geo_sessions", "", "")).toBeGreaterThanOrEqual(1);
+    expect(get("geo_visitors", "MY", "MY-10")).toBe(1);
+    expect(get("geo_new_sessions", "MY", "MY-10")).toBe(3);
+    expect(get("geo_page_views", "MY", "MY-10")).toBe(3);
+    expect(get("geo_router", "MY-10")).toBe(1);
+    expect(get("geo_mesh", "MY-10")).toBe(1);
+    expect(get("geo_problem", "MY-10")).toBe(1);
+    expect(get("geo_ai", "MY-10")).toBe(1);
+    expect(get("geo_escalated", "MY-10")).toBe(1);
+    expect(get("geo_model", "MY-10", model!.id)).toBe(1);
+    expect(get("geo_scenario", "MY-10", "mesh:mesh_pairing")).toBe(1);
+    expect(get("geo_source", "MY-10", "shopee")).toBe(1);
+    expect(get("geo_city", "MY-10", "Shah Alam")).toBe(1);
+    // Nothing geographic is stored beyond country, state and (consented) city.
+    const cols = await sql<{ column_name: string }[]>`SELECT column_name FROM information_schema.columns WHERE table_schema = 'analytics' AND table_name = 'events'`;
+    const names = cols.map((c) => c.column_name);
+    expect(names).toEqual(expect.arrayContaining(["country", "region", "city"]));
+    expect(names.some((n) => /ip|latitude|longitude|lat$|lon$/.test(n))).toBe(false);
+    // Idempotent: a second rollup does not double count.
+    await rollupDay(sql, day);
+    expect((await sql<{ v: number }[]>`SELECT value::int AS v FROM analytics.agg_daily WHERE day = ${day}::date AND metric = 'geo_sessions' AND dim1 = 'MY' AND dim2 = 'MY-10'`)[0]!.v).toBe(3);
+    await sql`DELETE FROM analytics.events WHERE session_id LIKE 'geo-%'`;
+  });
+
   it("job claims are exclusive across concurrent workers", async () => {
     const { claim } = await import("../../../apps/worker/src/queue");
     for (let i = 0; i < 5; i++) await sql`INSERT INTO ops.jobs (queue, payload) VALUES ('test_q', '{}')`;

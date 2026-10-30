@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { fileURLToPath } from "node:url";
 
 /**
  * End-to-end tests run against a disposable database (name must end in _test or _ci) and a
@@ -51,6 +52,8 @@ export default defineConfig({
       BBCARE_RATE_LIMIT_MULTIPLIER: "50",
       NEXT_TELEMETRY_DISABLED: "1",
       NEXT_DIST_DIR: ".next-e2e",
+      // Synthetic geolocation ranges (RFC 5737) so the geographic pipeline can be exercised end to end.
+      BBCARE_GEOIP_CSV: fileURLToPath(new URL("./e2e/fixtures/geoip-test.csv", import.meta.url)),
     },
   },
 });

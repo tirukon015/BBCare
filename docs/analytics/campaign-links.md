@@ -17,6 +17,16 @@ Keep values lowercase with dashes. Do not put names, phone numbers, order number
 
 ## Patterns
 
+Short forms also work. These two are recognised as Shopee and QR code respectively, without the `ch` label:
+
+```
+https://<bbcare-host>/?utm_source=shopee&utm_medium=referral&utm_campaign=bbcare_support
+https://<bbcare-host>/?utm_source=qr&utm_medium=offline&utm_campaign=router_support
+```
+
+First-touch and latest-touch attribution are kept per browser tab for every visitor and for 30 days only when the visitor allowed analytics (ADR 0009).
+
+
 Shopee listing description or chat auto-reply:
 
 ```
