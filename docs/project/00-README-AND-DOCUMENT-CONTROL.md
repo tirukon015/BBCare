@@ -14,6 +14,7 @@ This set is the source of truth for BBCare, BBTech.shop's customer care and supp
 - `07-agent-working-agreement.md`: rules for the coding agent.
 - `08-local-ai-commerce-and-analytics.md`: Malaysia scope, local AI, Shopee links, analytics (added v2).
 - `09-cloud-first-execution-policy.md`: cloud development, GitHub persistence, autonomy boundaries (added v3).
+- `10-master-roadmap-and-gap-analysis.md`: the owner's original handwritten plan mapped to the codebase, with statuses, phases, effort and required inputs (added 2026-10-30). Supersedes the phase list in 06 for sequencing.
 - `BBCare-Planning-Prompt.txt`: prompt for discovery only.
 
 ## Confirmed decisions
