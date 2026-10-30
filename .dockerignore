@@ -11,3 +11,6 @@
 storage
 packages/db/.seed-credentials.txt
 apps/web/e2e/.e2e-state.json
+infra/geoip.csv
+*.csv
+!apps/web/e2e/fixtures/geoip-test.csv
