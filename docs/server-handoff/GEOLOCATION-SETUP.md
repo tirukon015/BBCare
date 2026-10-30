@@ -25,9 +25,14 @@ IPv4 and IPv6 ranges are both read. Coordinates are never used or stored.
 cd /tmp && curl -fLO "https://download.db-ip.com/free/dbip-city-lite-$(date +%Y-%m).csv.gz"
 gunzip -f dbip-city-lite-*.csv.gz
 
-# 2. Convert to the compact file (Node 22 is present with the BBCare checkout)
-sudo mkdir -p /etc/bbcare
+# 2. Convert to the compact file. The converter is a single Node script in the repository checkout
+#    (infra/scripts/geoip-convert.mjs); it is not inside the runtime image. Use whichever is available:
+#    a) Node 22 on the host:
 node /path/to/bbcare/infra/scripts/geoip-convert.mjs /tmp/dbip-city-lite-*.csv /tmp/geoip.csv
+#    b) no Node on the host (Docker only), same result:
+docker run --rm -v /path/to/bbcare/infra/scripts:/scripts:ro -v /tmp:/work node:22-alpine \
+  node /scripts/geoip-convert.mjs /work/dbip-city-lite-YYYY-MM.csv /work/geoip.csv
+sudo mkdir -p /etc/bbcare
 sudo install -o root -g bbcare -m 0640 /tmp/geoip.csv /etc/bbcare/geoip.csv
 rm -f /tmp/dbip-city-lite-*.csv /tmp/geoip.csv
 
