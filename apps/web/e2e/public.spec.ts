@@ -7,11 +7,11 @@ test.describe("public site", () => {
     await page.goto("/");
     await expect(page).toHaveURL(/\/(en|ms)$/);
     await page.goto("/en");
-    await expect(page.getByRole("heading", { level: 1, name: "How can we help?" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Router Mesh Connection support" })).toBeVisible();
     await acceptEssentialOnly(page);
     await page.getByRole("link", { name: /Bahasa Melayu/ }).click();
     await expect(page).toHaveURL(/\/ms$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Bagaimana kami boleh membantu?" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Sokongan Sambungan Mesh penghala" })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("lang", "ms");
     await expectNoHorizontalScroll(page);
   });

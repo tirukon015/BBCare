@@ -26,8 +26,7 @@ test.describe("customer analytics and intelligence", () => {
     expect(body.rejected).toBe(0);
     // The journey: model, mode, problem, step, escalation.
     await page.getByTestId("router-model").filter({ hasText: "TP-Link EX230V" }).click();
-    await page.getByTestId("mode-ap").click();
-    await page.getByTestId("scenario-ap_enable").click();
+    await page.getByTestId("scenario-mesh_pairing").click();
     await expect(page.getByTestId("step-prompt")).toBeVisible();
     await page.getByRole("button", { name: "Done, next step" }).click();
     await page.getByRole("button", { name: "Still not working" }).click();

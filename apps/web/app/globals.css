@@ -1,25 +1,45 @@
 @import "tailwindcss";
 
-/* BBCare design tokens: charcoal, white and warm neutrals, muted olive. No gradients. */
+/*
+ * BBCare design tokens. Sky-blue and blue customer-support palette (temporary foundation, easy to
+ * retheme): change the semantic tokens below and every component follows. The older "olive" and
+ * "sand" names are kept as aliases so existing components need no rewrite. No gradients.
+ */
 @theme {
-  --color-ink: #262624;
-  --color-ink-soft: #4a4945;
-  --color-muted: #6e6c66;
-  --color-line: #ddd8ce;
-  --color-paper: #faf8f4;
-  --color-sand: #f1ede5;
-  --color-white: #ffffff;
-  --color-olive: #556236;
-  --color-olive-dark: #3f4a27;
-  --color-olive-soft: #e7eadb;
-  --color-warn: #8a5a12;
-  --color-warn-soft: #f7ecd6;
-  --color-danger: #9b2c22;
-  --color-danger-soft: #f6e0dc;
-  --color-ok: #3d6b3a;
-  --color-chart: #5f7a1f; /* validated: chroma, lightness band, contrast vs surface */
+  /* Semantic palette */
+  --color-brand: #1677d2;          /* the suggested primary blue; decorative and large elements only (4.3:1 on the light sky surface) */
+  --color-primary: #1365b8;        /* primary blue for text, buttons and links: 5.5:1 on the light sky surface, 5.9:1 on white */
+  --color-primary-dark: #075985;   /* hover, emphasis */
+  --color-primary-soft: #e0f2fe;   /* soft fills behind primary content */
+  --color-sky: #38bdf8;            /* accent only, never for text on white */
+  --color-surface: #ffffff;
+  --color-surface-soft: #f0f9ff;   /* light sky page background and soft panels */
+  --color-border: #e0f2fe;
+  --color-text: #0f172a;
+  --color-text-soft: #334155;
+  --color-text-muted: #475569;     /* 7:1 on the light sky surface; #64748b fails AA there */
+
+  /* Component tokens used by Tailwind classes (bg-paper, text-ink, border-line, bg-olive ...) */
+  --color-ink: var(--color-text);
+  --color-ink-soft: var(--color-text-soft);
+  --color-muted: var(--color-text-muted);
+  --color-line: var(--color-border);
+  --color-paper: var(--color-surface-soft);
+  --color-sand: #eaf5fd;
+  --color-white: var(--color-surface);
+  --color-olive: var(--color-primary);
+  --color-olive-dark: var(--color-primary-dark);
+  --color-olive-soft: var(--color-primary-soft);
+  --color-warn: #92400e;
+  --color-warn-soft: #fef3c7;
+  --color-danger: #b42318;
+  --color-danger-soft: #fee4e2;
+  --color-ok: #15803d;
+  --color-chart: #1365b8; /* validated: contrast against white and the light sky surface */
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
-  --radius-card: 0.75rem;
+  --radius-card: 0.875rem;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px rgb(22 119 210 / 0.06);
+  --shadow-panel: 0 8px 32px rgb(15 23 42 / 0.18);
 }
 
 html {
@@ -34,7 +54,7 @@ body {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-olive);
+  outline: 3px solid var(--color-primary);
   outline-offset: 2px;
   border-radius: 4px;
 }

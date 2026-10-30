@@ -37,7 +37,7 @@ async function addVerifiedFixtureFlow(sql: ReturnType<typeof createSql>) {
     VALUES ('staff_authored', 'E2E test fixture source', 'BBCare tests', 'reviewed', 'approved', ${reviewer!.id}, 'Synthetic test document text for the E2E fixture flow. Not product guidance.') RETURNING id`;
   const [flow] = await sql<{ id: string }[]>`
     INSERT INTO knowledge.flows (category_id, slug, title_en, title_ms, model_id, support_mode, scenario_key)
-    VALUES (${model!.category_id}, 'e2e-fixture-ex2-ap-enable', 'Set up Access Point mode', 'Tetapkan mod Titik Akses', ${model!.id}, 'ap', 'ap_enable')
+    VALUES (${model!.category_id}, 'e2e-fixture-ex2-mesh-pairing', 'Mesh pairing does not work', 'Pairing mesh tidak berjaya', ${model!.id}, 'mesh', 'mesh_pairing')
     RETURNING id`;
   const steps = [
     { key: "s1", start: true, en: "[Test fixture] Step one.", ms: "[Fixture ujian] Langkah satu.", exp_en: "[Test fixture] You see the result of step one.", exp_ms: "[Fixture ujian] Anda melihat hasil langkah satu.", destructive: false,

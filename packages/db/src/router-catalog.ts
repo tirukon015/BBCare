@@ -54,7 +54,7 @@ const FEATURE_TO_SCENARIO: Record<string, string> = {
   easymesh_pairing: "mesh_pairing",
   easymesh_support_by_version: "mesh_pairing",
   ethernet_backhaul: "mesh_wired_backhaul",
-  placement: "mesh_unstable",
+  placement: "mesh_weak_signal",
   factory_reset_last_resort: "recovery_failed",
   access_point_mode: "ap_enable",
   admin_access_in_ap_mode: "ap_admin_access",

@@ -15,7 +15,7 @@ test.describe("router support journey", () => {
     await expect(cards).toHaveCount(7);
     for (const [i, [name, ecr]] of MODELS.entries()) {
       await expect(cards.nth(i)).toContainText(name);
-      await expect(cards.nth(i)).toContainText(ecr);
+      await expect(cards.nth(i)).toContainText(`ECR ${ecr}`);
     }
     await expect(page.locator("main")).not.toContainText(/Nimbus|Kestrel|sample/i);
     // No photo is verified yet, so none is shown.
@@ -36,21 +36,23 @@ test.describe("router support journey", () => {
       for (const [i, [name, ecr]] of MODELS.entries()) {
         await expect(cards.nth(i)).toBeVisible();
         await expect(cards.nth(i)).toContainText(name);
-        await expect(cards.nth(i)).toContainText(ecr);
+        await expect(cards.nth(i)).toContainText(`ECR ${ecr}`);
         // Each card has its own placeholder for its own model until a verified photo exists.
         await expect(cards.nth(i).getByTestId("image-pending")).toHaveAttribute("data-ecr", ecr);
       }
       await expect(page.getByRole("navigation", { name: "Main" })).not.toContainText(/Laptop/);
       await expect(page.locator("main")).not.toContainText(/Nimbus|Kestrel/);
       await expectNoHorizontalScroll(page);
-      // Each card opens its own model page with the two supported categories only.
+      // Each card opens its own Mesh Connection page; no other category is presented.
       await cards.nth(5).click();
-      await expect(page).toHaveURL(new RegExp(`/${locale}/routers/kaon-ar2140$`));
+      await expect(page).toHaveURL(new RegExp(`/${locale}/routers/kaon-ar2140/mesh$`));
       await expect(page.getByTestId("model-name")).toHaveText("Kaon AR2140");
-      await expect(page.getByTestId("model-ecr")).toHaveText("KAO");
-      await expect(page.locator("[data-testid^=mode-]")).toHaveCount(2);
-      await page.getByTestId("mode-ap").click();
-      await expect(page.getByTestId("scenario-ap_enable")).toContainText(locale === "ms" ? "Bantuan staf" : "Staff help");
+      await expect(page.getByTestId("model-ecr")).toHaveText("ECR KAO");
+      await expect(page.locator("[data-testid^=mode-]")).toHaveCount(0);
+      await expect(page.locator("main")).not.toContainText(/Access Point|Titik Akses|AP mode|mod AP/i);
+      await expect(page.getByTestId("scenario-mesh_pairing")).toContainText(locale === "ms" ? "Bantuan staf" : "Staff help");
+      await expect(page.getByTestId("scenario-mesh_setup")).toBeVisible();
+      await expect(page.getByTestId("mesh-explainer")).toBeVisible();
     });
   }
 
@@ -60,13 +62,17 @@ test.describe("router support journey", () => {
     expect(await ready.json()).toMatchObject({ status: "ready", routerModels: 7 });
   });
 
-  test("model page shows name, code, identity note and both modes", async ({ page }) => {
+  test("model page shows name, ECR identifier and identity note, and only Mesh Connection is exposed", async ({ page }) => {
     await page.goto("/en/routers/huawei-lg-8245-x6");
+    await expect(page).toHaveURL(/\/en\/routers\/huawei-lg-8245-x6\/mesh$/);
     await expect(page.getByTestId("model-name")).toHaveText("Huawei LG-8245-X6");
-    await expect(page.getByTestId("model-ecr")).toHaveText("HUA");
-    await expect(page.getByRole("note")).toContainText("LG8245X6-10");
-    await expect(page.getByTestId("mode-mesh")).toBeVisible();
-    await expect(page.getByTestId("mode-ap")).toBeVisible();
+    await expect(page.getByTestId("model-ecr")).toHaveText("ECR HUA");
+    await expect(page.getByRole("note").filter({ hasText: "LG8245X6-10" })).toBeVisible();
+    const keys = await page.locator("[data-testid^=scenario-]").evaluateAll((els) => els.map((e) => e.getAttribute("data-testid")));
+    expect(keys).toEqual(["scenario-mesh_setup", "scenario-mesh_pairing", "scenario-mesh_no_internet", "scenario-mesh_node_offline", "scenario-mesh_weak_signal", "scenario-mesh_unstable", "scenario-mesh_drops", "scenario-mesh_restart_retry", "scenario-mesh_wired_backhaul", "scenario-mesh_roaming", "scenario-recovery_failed"]);
+    // Access Point pages are not available to customers in this release.
+    expect((await page.goto("/en/routers/huawei-lg-8245-x6/ap"))?.status()).toBe(404);
+    expect((await page.goto("/en/routers/huawei-lg-8245-x6/ap/ap_enable"))?.status()).toBe(404);
   });
 
   test("own words in Malay are matched, unverified problem asks questions and escalates with follow-up", async ({ page }) => {
@@ -112,11 +118,11 @@ test.describe("router support journey", () => {
   });
 
   test("verified guide shows expected results, warns before a reset, cites sources and escalates on failure", async ({ page }) => {
-    await page.goto("/en/routers/tp-link-ex230v/ap");
+    await page.goto("/en/routers/tp-link-ex230v/mesh");
     await acceptEssentialOnly(page);
-    await expect(page.getByTestId("scenario-ap_enable")).toContainText("Verified guide");
-    await expect(page.getByTestId("scenario-ap_no_internet")).toContainText("Staff help");
-    await page.getByTestId("scenario-ap_enable").click();
+    await expect(page.getByTestId("scenario-mesh_pairing")).toContainText("Verified guide");
+    await expect(page.getByTestId("scenario-mesh_no_internet")).toContainText("Staff help");
+    await page.getByTestId("scenario-mesh_pairing").click();
     await expect(page.getByTestId("step-prompt")).toHaveText("[Test fixture] Step one.");
     await expect(page.getByTestId("step-expected")).toContainText("You see the result of step one.");
     await expect(page.getByTestId("flow-sources")).toContainText("E2E test fixture source");
@@ -132,7 +138,7 @@ test.describe("router support journey", () => {
   });
 
   test("Malay verified guide is in Malay", async ({ page }) => {
-    await page.goto("/ms/routers/tp-link-ex230v/ap/ap_enable");
+    await page.goto("/ms/routers/tp-link-ex230v/mesh/mesh_pairing");
     await expect(page.getByTestId("step-prompt")).toHaveText("[Fixture ujian] Langkah satu.");
   });
 
@@ -144,7 +150,7 @@ test.describe("router support journey", () => {
     await expect(page.getByTestId("router-suggestion").getByRole("link")).toHaveAttribute("href", "/en/routers/kaon-ar2140/mesh/mesh_pairing");
   });
 
-  for (const path of ["/en/routers/kaon-ar2140", "/ms/routers/kaon-ar2140/ap", "/en/routers/kaon-ar2140/mesh/mesh_pairing", "/en/support/case"]) {
+  for (const path of ["/en", "/en/routers/kaon-ar2140", "/ms/routers/kaon-ar2140/mesh", "/en/routers/kaon-ar2140/mesh/mesh_pairing", "/en/support/case"]) {
     test(`has no serious accessibility violations: ${path}`, async ({ page }) => {
       await page.goto(path);
       await acceptEssentialOnly(page);

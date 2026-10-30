@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { matchScenarios, scenariosForMode, type SupportMode } from "@bbcare/core";
+import { isCustomerSupportMode, matchScenarios, scenariosForMode, type SupportMode } from "@bbcare/core";
 import { getDictionary, localeOrDefault } from "@/i18n";
 import { getRouterModel, verifiedScenarios } from "@/modules/router/service";
 import { recordUnresolved } from "@/modules/support/gaps";
 import { ModelHeader } from "@/components/router/model-header";
-import { Badge, Container, Notice, SectionHeading, buttonStyles, inputStyles } from "@/components/ui";
+import { Badge, ButtonLink, Container, Notice, SectionHeading, buttonStyles, inputStyles } from "@/components/ui";
+import { OpenAssistantButton, SetRouterContext } from "@/components/assistant/router-context";
 import { TrackOnMount } from "@/components/track-on-mount";
 
 export const dynamic = "force-dynamic";
 
-const asMode = (v: string): SupportMode | null => (v === "mesh" || v === "ap" ? v : null);
+// Customers only see the modes of the current release; other modes are not presented at all.
+const asMode = (v: string): SupportMode | null => (isCustomerSupportMode(v) ? v : null);
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string; model: string; mode: string }> }): Promise<Metadata> {
   const { locale, model, mode } = await params;
@@ -38,7 +40,7 @@ export default async function RouterModePage({ params, searchParams }: { params:
     const s = scenarios.find((x) => x.key === key)!;
     return (
       <li key={key}>
-        <Link href={`${base}/${key}${highlight && q ? `?q=${encodeURIComponent(q)}` : ""}`} className={`flex h-full flex-col gap-1 rounded-[var(--radius-card)] border bg-white p-4 hover:border-olive ${highlight ? "border-olive" : "border-line"}`} data-track="router.pick_scenario" data-testid={`scenario-${key}`}>
+        <Link href={`${base}/${key}${highlight && q ? `?q=${encodeURIComponent(q)}` : ""}`} className={`flex h-full flex-col gap-1 rounded-[var(--radius-card)] border bg-white p-4 shadow-[var(--shadow-card)] hover:border-primary ${highlight ? "border-primary" : "border-line"}`} data-track="router.pick_scenario" data-testid={`scenario-${key}`}>
           <span className="flex flex-wrap items-center justify-between gap-2">
             <span className="font-semibold">{locale === "ms" ? s.ms : s.en}</span>
             {verified.has(key) ? <Badge tone="olive">{t.router.verifiedBadge}</Badge> : <Badge>{t.router.staffBadge}</Badge>}
@@ -50,10 +52,17 @@ export default async function RouterModePage({ params, searchParams }: { params:
   };
   return (
     <Container className="py-8">
+      <TrackOnMount name="router_model_selected" props={{ model_id: model.id, ecr: model.ecr }} />
       <TrackOnMount name="router_mode_selected" props={{ model_id: model.id, mode }} />
-      <ModelHeader model={model} locale={locale} t={t} compact />
+      <SetRouterContext model={{ slug: model.slug, name: model.name, ecr: model.ecr }} mode={mode} />
+      <ModelHeader model={model} locale={locale} t={t} />
       <h2 className="mt-6 text-2xl font-bold">{t.router.modes[mode]}</h2>
       <p className="text-ink-soft">{t.router.modes[`${mode}Body`]}</p>
+      <details className="mt-4 max-w-2xl rounded-[var(--radius-card)] border border-line bg-white p-4" data-testid="mesh-explainer">
+        <summary className="cursor-pointer font-semibold text-primary-dark">{t.router.meshExplainTitle}</summary>
+        <p className="mt-2 text-sm text-ink-soft">{t.router.meshExplainBody}</p>
+        <p className="mt-2 text-sm text-ink-soft">{t.router.meshOnlyNote}</p>
+      </details>
 
       <form method="get" action={base} className="mt-6 flex max-w-2xl flex-col gap-2 sm:flex-row" role="search">
         <label htmlFor="describe" className="sr-only">{t.router.describe}</label>
@@ -78,6 +87,18 @@ export default async function RouterModePage({ params, searchParams }: { params:
       <section className="mt-8" aria-labelledby="problems">
         <SectionHeading id="problems">{t.router.chooseProblem}</SectionHeading>
         <ul className="grid gap-3 sm:grid-cols-2">{scenarios.map((s) => item(s.key))}</ul>
+      </section>
+      <section className="mt-8 grid gap-3 sm:grid-cols-2" aria-label={t.router.whenToContact}>
+        <div className="rounded-[var(--radius-card)] border border-line bg-white p-4">
+          <h3 className="font-semibold">{t.router.whenToContact}</h3>
+          <p className="mt-1 text-sm text-ink-soft">{t.router.whenToContactBody}</p>
+          <div className="mt-3"><ButtonLink href={`/${locale}/support?model=${model.slug}&escalate=1`} variant="secondary" data-track="router.contact_staff">{t.home.humanCta}</ButtonLink></div>
+        </div>
+        <div className="rounded-[var(--radius-card)] border border-primary-soft bg-primary-soft p-4">
+          <h3 className="font-semibold text-primary-dark">{t.chat.title}</h3>
+          <p className="mt-1 text-sm text-ink-soft">{t.home.aiNote}</p>
+          <div className="mt-3"><OpenAssistantButton label={t.router.supportChat} /></div>
+        </div>
       </section>
     </Container>
   );

@@ -11,6 +11,6 @@
 {"key":"kao-mesh-pairing-ms","locale":"ms","ecr":"KAO","mode":"mesh","scenario":"mesh_pairing","question":"kaon unit kedua mcm mana nk buat mesh"}
 {"key":"kao-recovery-ms","locale":"ms","ecr":"KAO","mode":"mesh","scenario":"recovery_failed","question":"dah reset kaon pun masih tak boleh mesh"}
 {"key":"hua-mesh-pairing-en","locale":"en","ecr":"HUA","mode":"mesh","scenario":"mesh_pairing","question":"Huawei LG-8245-X6 second unit will not switch to EasyMesh"}
-{"key":"hua-mesh-unstable-ms","locale":"ms","ecr":"HUA","mode":"mesh","scenario":"mesh_unstable","question":"signal mesh huawei lemah dalam bilik, nak letak kat mana"}
+{"key":"hua-mesh-unstable-ms","locale":"ms","ecr":"HUA","mode":"mesh","scenario":"mesh_weak_signal","question":"signal mesh huawei lemah dalam bilik, nak letak kat mana"}
 {"key":"hua-ap-enable-en","locale":"en","ecr":"HUA","mode":"ap","scenario":"ap_enable","question":"Can the Huawei LG-8245-X6 be used as an access point?"}
 {"key":"kao-ap-admin-en","locale":"en","ecr":"KAO","mode":"ap","scenario":"ap_admin_access","question":"I cannot open the Kaon settings page after AP mode, what is the login?"}

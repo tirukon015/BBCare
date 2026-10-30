@@ -29,10 +29,10 @@ describe("router catalogue", () => {
 });
 
 describe("scenarios", () => {
-  it("covers only Mesh and AP and lists the 11 decision trees", () => {
-    expect(SCENARIOS).toHaveLength(11);
+  it("covers only Mesh and AP and lists the 15 decision trees", () => {
+    expect(SCENARIOS).toHaveLength(15);
     expect(scenariosForMode("mesh").map((s) => s.key)).toEqual([
-      "mesh_pairing", "mesh_no_internet", "mesh_node_offline", "mesh_unstable", "mesh_wired_backhaul", "mesh_roaming", "recovery_failed",
+      "mesh_setup", "mesh_pairing", "mesh_no_internet", "mesh_node_offline", "mesh_weak_signal", "mesh_unstable", "mesh_drops", "mesh_restart_retry", "mesh_wired_backhaul", "mesh_roaming", "recovery_failed",
     ]);
     expect(scenariosForMode("ap").map((s) => s.key)).toEqual(["ap_enable", "ap_no_internet", "ap_ip_conflict", "ap_admin_access", "recovery_failed"]);
   });
@@ -62,7 +62,9 @@ describe("matching customer words", () => {
     ["satellite wifi got signal but cannot browse", "mesh", "mesh_no_internet"],
     ["unit mesh asyik offline", "mesh", "mesh_node_offline"],
     ["satelit hilang dari app", "mesh", "mesh_node_offline"],
-    ["signal mesh lemah dalam bilik", "mesh", "mesh_unstable"],
+    ["signal mesh lemah dalam bilik", "mesh", "mesh_weak_signal"],
+    ["mesh asyik putus every few minutes", "mesh", "mesh_drops"],
+    ["macam mana nak sambung unit mesh baru dengan router utama kali pertama", "mesh", "mesh_setup"],
     ["boleh sambung mesh guna kabel lan?", "mesh", "mesh_wired_backhaul"],
     ["ethernet backhaul not working", "mesh", "mesh_wired_backhaul"],
     ["video call cut when moving room", "mesh", "mesh_roaming"],

@@ -13,5 +13,6 @@ Each significant decision has a numbered record. Status values: Proposed, Accept
 | [0007](0007-git-workflow.md) | Git workflow and checkpoints | Accepted |
 | [0008](0008-router-first-verified-guidance.md) | Router-first catalogue and verified-only model guidance | Accepted |
 | [0009](0009-customer-demand-intelligence.md) | Customer demand intelligence and resource library | Accepted |
+| [0010](0010-mesh-only-customer-release.md) | Mesh Connection only in the customer release, floating assistant on shared infrastructure | Accepted |
 
 Template for new records: Context, Options, Decision, Consequences (cost, privacy, operations), Follow-up.

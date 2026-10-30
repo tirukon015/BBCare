@@ -131,6 +131,9 @@ Effort is engineering time in the cloud session, excluding waiting for BBTech in
 | `main` branch and release pull request (B-12) | S | owner | Approval |
 | Production deploy at `support.bbtech.com.my` | S | all above | Explicit approval |
 
+## Customer release scope (2026-10-30)
+The first customer-facing release exposes Mesh Connection only (ADR 0010). Access Point mode stays in the data model, drafts, admin coverage and evaluations, and is hidden from customers until the owner approves adding it to `CUSTOMER_SUPPORT_MODES`.
+
 ## Dependency summary
 ```
 B-15/B-18 manuals + reviewer -> R1 verified flows -> R2 AI on router knowledge -> P3 learning loop

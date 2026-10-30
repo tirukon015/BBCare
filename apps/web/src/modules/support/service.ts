@@ -8,6 +8,7 @@ import { classifyResolution, resolveModels, searchKnowledge, type ModelCandidate
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { aiProvider, aiState } from "@/lib/ai";
+import { routerEvidence } from "@/modules/router/ai-context";
 import { logger } from "@/lib/logger";
 import { getRecommendations, type RecommendationCard } from "@/modules/commerce/service";
 import { recordUnresolved } from "./gaps";
@@ -72,7 +73,10 @@ function toArticleRefs(hits: SearchHit[]): ArticleRef[] {
   return hits.slice(0, 3).map((h) => ({ slug: h.articleSlug, title: h.title, snippet: h.snippet.replace(/<<|>>/g, ""), locale: h.locale, safetyLevel: h.safetyLevel, models: h.appliesToModels }));
 }
 
-export async function handleCustomerMessage(session: SessionRow, rawText: string, opts: { modelSlug?: string | null }) {
+/** Where the customer is in the router journey, as the browser reports it. Only known modes and scenario keys are used. */
+export interface JourneyContext { mode: SupportMode; scenario?: string | null; step?: string | null }
+
+export async function handleCustomerMessage(session: SessionRow, rawText: string, opts: { modelSlug?: string | null; context?: JourneyContext | null }) {
   const sql = db();
   const text = redactSecrets(scrubPersonalData(rawText.trim())).text.slice(0, 1000);
   const language = detectLanguage(text, session.locale);
@@ -110,7 +114,17 @@ export async function handleCustomerMessage(session: SessionRow, rawText: string
     ? await sql<{ slug: string; display_name: string; ecr_code: string | null }[]>`SELECT slug, display_name, ecr_code FROM catalog.product_models WHERE id = ${modelId}`
     : [];
   const resolvedModel = model ? { slug: model.slug, name: model.display_name } : null;
-  const routerSuggestion = model?.ecr_code ? suggestRouterScenario(model.slug, text) : null;
+  // The journey context (chosen problem) wins over keyword matching; otherwise suggest the closest problem.
+  const ctxScenario = opts.context?.scenario && scenarioByKey(opts.context.scenario)?.modes.includes(opts.context.mode) ? scenarioByKey(opts.context.scenario)! : null;
+  const routerSuggestion = model?.ecr_code
+    ? ctxScenario && opts.context ? { modelSlug: model.slug, mode: opts.context.mode, scenario: ctxScenario.key, titleEn: ctxScenario.en, titleMs: ctxScenario.ms } : suggestRouterScenario(model.slug, text)
+    : null;
+  // Verified step-by-step guidance for the model and problem is evidence the assistant may use.
+  const flowEvidence = model?.ecr_code && routerSuggestion ? await routerEvidence(model.slug, routerSuggestion.mode, routerSuggestion.scenario, language) : [];
+  const contextLines = model?.ecr_code
+    ? [`Router: ${model.display_name}`, `Identifier: ECR ${model.ecr_code}`, `Support scope: Mesh Connection only`,
+       routerSuggestion ? `Chosen problem: ${routerSuggestion.titleEn}` : null, opts.context?.step ? `Current guide step: ${opts.context.step}` : null].filter(Boolean).join("\n")
+    : null;
   if (routerSuggestion && modelId) {
     await detectAndRecordDemand({
       modelId, supportMode: routerSuggestion.mode, scenarioKey: routerSuggestion.scenario, locale: language, question: text, origin: "assistant",
@@ -144,14 +158,14 @@ export async function handleCustomerMessage(session: SessionRow, rawText: string
   let outcome: "answered" | "abstain" | "clarify" = hits.length ? "answered" : "abstain";
   let citations: { chunkId: string; revisionId: string }[] = [];
 
-  if (ai.enabled && hits.length > 0) {
+  if (ai.enabled && (hits.length > 0 || flowEvidence.length > 0)) {
     const provider = aiProvider()!;
     const chunkRows = await sql<{ id: string; revision_id: string; heading: string; content: string }[]>`
       SELECT id, revision_id, heading, content FROM knowledge.chunks WHERE id = ANY (${hits.slice(0, 4).map((h) => h.chunkId)}::uuid[])`;
-    const evidence: Evidence[] = hits.slice(0, 4).flatMap((h, i) => {
+    const evidence: Evidence[] = [...flowEvidence, ...hits.slice(0, 4).flatMap((h, i) => {
       const c = chunkRows.find((r) => r.id === h.chunkId);
-      return c ? [{ ref: `E${i + 1}`, chunkId: c.id, revisionId: c.revision_id, title: h.title, heading: c.heading, text: c.content, safetyLevel: h.safetyLevel }] : [];
-    });
+      return c ? [{ ref: `E${flowEvidence.length + i + 1}`, chunkId: c.id, revisionId: c.revision_id, title: h.title, heading: c.heading, text: c.content, safetyLevel: h.safetyLevel }] : [];
+    })];
     const productCands: ProductCandidate[] = [];
     if (modelId && wantsProducts) {
       const rows = await sql<{ id: string; name_en: string }[]>`
@@ -163,7 +177,7 @@ export async function handleCustomerMessage(session: SessionRow, rawText: string
     const history = (await sql<{ role: string; content: string }[]>`
       SELECT role, content FROM support.messages WHERE session_id = ${session.id} AND role IN ('customer','assistant') AND id <> ${customerMsg!.id}
       ORDER BY created_at DESC LIMIT 4`).reverse().map((m) => ({ role: m.role === "customer" ? ("user" as const) : ("assistant" as const), content: m.content.slice(0, 500) }));
-    const result = await generateGroundedAnswer(provider, { question: text, locale: language, modelName: resolvedModel?.name ?? null, evidence, products: productCands, history });
+    const result = await generateGroundedAnswer(provider, { question: text, locale: language, modelName: resolvedModel?.name ?? null, evidence, products: productCands, history, context: contextLines });
     await sql`UPDATE support.retrieval_runs SET provider = ${provider.name}, model = ${"model" in result ? (result.model ?? null) : null}, prompt_version = ${result.promptVersion} WHERE id = ${run!.id}`;
     if (result.kind === "answer") {
       const slugs = await sql<{ revision_id: string; slug: string; title: string }[]>`
@@ -172,7 +186,8 @@ export async function handleCustomerMessage(session: SessionRow, rawText: string
       const products = result.answer.productIds.length && modelId
         ? await getRecommendations({ modelId, locale: language, context: "chat", supportSessionId: session.id, productIds: result.answer.productIds, limit: 2 })
         : [];
-      citations = result.answer.citations.map((c) => ({ chunkId: c.chunkId, revisionId: c.revisionId }));
+      // Only knowledge chunks are stored as citation rows; verified-flow passages are identified by the router suggestion link.
+      citations = result.answer.citations.filter((c) => !c.chunkId.startsWith("flow:") && !c.chunkId.startsWith("resources:")).map((c) => ({ chunkId: c.chunkId, revisionId: c.revisionId }));
       payload = {
         kind: "answer", language, mode: "ai", mock: result.mock, resolvedModel,
         sections: { confirmed: result.answer.confirmed, possibleCauses: result.answer.possibleCauses, steps: result.answer.steps, warnings: result.answer.warnings },

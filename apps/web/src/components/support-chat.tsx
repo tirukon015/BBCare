@@ -20,13 +20,17 @@ interface Props {
   initialModel: { slug: string; name: string } | null;
   startEscalated: boolean;
   contacts: { whatsapp?: string; email?: string };
+  /** Compact layout for the floating panel. Same API, same rules. */
+  compact?: boolean;
+  /** Router journey the page is showing, so the assistant and AI prompt stay on the chosen problem and step. */
+  journey?: { mode: "mesh" | "ap"; scenario: string | null; step: string | null } | null;
 }
 
 function lengthBucket(n: number): "xs" | "s" | "m" | "l" {
   return n < 20 ? "xs" : n < 80 ? "s" : n < 250 ? "m" : "l";
 }
 
-export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEscalated, contacts }: Props) {
+export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEscalated, contacts, compact = false, journey = null }: Props) {
   const s = t.support;
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -41,6 +45,10 @@ export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEsc
   useEffect(() => {
     logRef.current?.lastElementChild?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [messages]);
+  useEffect(() => {
+    if (!compact) track("assistant_opened", { entry: "page", has_model: !!initialModel });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per page open
+  }, []);
 
   async function ensureSession(): Promise<string> {
     if (sessionId) return sessionId;
@@ -68,12 +76,13 @@ export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEsc
       const res = await fetch(`/api/public/support/sessions/${id}/messages`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: clean, model: modelSlug ?? null }),
+        body: JSON.stringify({ text: clean, model: modelSlug ?? null, context: journey ? { mode: journey.mode, scenario: journey.scenario, step: journey.step } : null }),
       });
       if (res.status === 429) throw new Error("rate");
       if (!res.ok) throw new Error("error");
       const data = (await res.json()) as { id: string; outcome: string; payload: AssistantPayload };
       if (data.payload.resolvedModel) setModel(data.payload.resolvedModel);
+      if (data.payload.aiUnavailable) track("ai_unavailable", { support_session: id });
       setMessages((m) => [...m, { id: data.id, role: "assistant", payload: data.payload }]);
       track("support_message_submitted", {
         support_session: id,
@@ -126,13 +135,15 @@ export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEsc
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-lg border border-line bg-sand px-4 py-3 text-sm text-ink-soft" role="note">
-        {aiEnabled ? s.disclosureAi : s.disclosureSearch}
-        {mock && aiEnabled ? <p className="mt-1 font-medium text-warn">{s.mockNotice}</p> : null}
-      </div>
+    <div className={compact ? "flex flex-col gap-3 text-sm" : "flex flex-col gap-4"}>
+      {compact ? (mock && aiEnabled ? <p className="text-xs font-medium text-warn">{s.mockNotice}</p> : null) : (
+        <div className="rounded-lg border border-line bg-sand px-4 py-3 text-sm text-ink-soft" role="note">
+          {aiEnabled ? s.disclosureAi : s.disclosureSearch}
+          {mock && aiEnabled ? <p className="mt-1 font-medium text-warn">{s.mockNotice}</p> : null}
+        </div>
+      )}
 
-      {model ? (
+      {model && !compact ? (
         <p className="text-sm">
           <span className="text-muted">{s.model}: </span>
           <span className="font-semibold">{model.name}</span>{" "}
@@ -142,7 +153,7 @@ export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEsc
         </p>
       ) : null}
 
-      <ol ref={logRef} aria-live="polite" aria-label={s.title} className="flex flex-col gap-3">
+      <ol ref={logRef} aria-live="polite" aria-label={s.title} className="flex flex-col gap-3" data-testid={compact ? "assistant-log" : "support-log"}>
         {messages.length === 0 ? <li className="text-sm text-muted">{s.started}</li> : null}
         {messages.map((m) =>
           m.role === "customer" ? (
@@ -187,9 +198,9 @@ export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEsc
                 onSubmit(e);
               }
             }}
-            rows={2}
+            rows={compact ? 1 : 2}
             maxLength={1000}
-            placeholder={s.placeholder}
+            placeholder={compact ? s.placeholderShort : s.placeholder}
             className="min-h-11 w-full resize-y rounded-lg border border-line bg-white px-3 py-2 text-base"
           />
           <button type="submit" disabled={busy || !text.trim()} className="min-h-11 shrink-0 rounded-lg bg-olive px-5 text-sm font-semibold text-white hover:bg-olive-dark disabled:opacity-60" data-testid="support-send">

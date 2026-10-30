@@ -13,6 +13,9 @@ import { normalizeForSearch } from "./text";
 export type Locale2 = "en" | "ms";
 export type SupportMode = "mesh" | "ap";
 export const SUPPORT_MODES: readonly SupportMode[] = ["mesh", "ap"] as const;
+/** Modes exposed to customers in the current release. AP stays in the data model and staff tools only. */
+export const CUSTOMER_SUPPORT_MODES: readonly SupportMode[] = ["mesh"] as const;
+export const isCustomerSupportMode = (v: string): v is SupportMode => (CUSTOMER_SUPPORT_MODES as readonly string[]).includes(v);
 
 export interface RouterModelDef {
   ecr: string;
@@ -103,8 +106,12 @@ export interface ScenarioDef {
 }
 
 export const SCENARIOS: readonly ScenarioDef[] = [
+  { key: "mesh_setup", modes: ["mesh"], en: "Connect a main router and a mesh unit for the first time", ms: "Sambungkan penghala utama dan unit mesh buat kali pertama",
+    summaryEn: "Setting up a second unit so both work as one Wi-Fi network.", summaryMs: "Menyediakan unit kedua supaya kedua-duanya berfungsi sebagai satu rangkaian Wi-Fi.",
+    intake: ["unit_role", "link_type", "distance"],
+    keywords: ["first time", "kali pertama", "how to connect", "macam mana sambung", "cara sambung", "setup mesh", "set up mesh", "pasang mesh", "new unit", "unit baru", "install", "~connect", "~sambung", "main router", "penghala utama", "satellite setup"] },
   { key: "mesh_pairing", modes: ["mesh"], en: "Mesh pairing does not work", ms: "Pairing mesh tidak berjaya",
-    summaryEn: "The second unit will not join the mesh.", summaryMs: "Unit kedua tidak dapat menyertai mesh.",
+    summaryEn: "The second unit will not join the mesh, or cannot connect to the main router.", summaryMs: "Unit kedua tidak dapat menyertai mesh, atau tidak dapat bersambung ke penghala utama.",
     intake: ["unit_role", "link_type", "distance", "reset_done"],
     keywords: ["pair", "pairing", "wps", "add satellite", "add satelite", "add agent", "add mesh", "mesh device", "~satelit", "~satellite", "~agent", "tidak jumpa", "cannot find", "not detected", "tidak detect", "~buat mesh", "~jadi mesh", "~sambung mesh", "~tambah", "easymesh setup", "easy mesh", "onemesh", "join mesh"] },
   { key: "mesh_no_internet", modes: ["mesh"], en: "Mesh unit connected but no internet", ms: "Unit mesh bersambung tetapi tiada internet",
@@ -115,10 +122,22 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     summaryEn: "The second unit has disappeared or keeps going offline.", summaryMs: "Unit kedua hilang atau sering offline.",
     intake: ["started", "light_state", "link_type", "restarted"],
     keywords: ["offline", "disappear", "hilang", "disconnected", "putus", "not showing", "tidak tunjuk", "network map", "power cut", "blackout", "gone", "missing", "yesterday", "semalam"] },
-  { key: "mesh_unstable", modes: ["mesh"], en: "Weak or unstable mesh", ms: "Mesh lemah atau tidak stabil",
-    summaryEn: "Coverage is weak or the connection keeps dropping.", summaryMs: "Liputan lemah atau sambungan sering terputus.",
+  { key: "mesh_weak_signal", modes: ["mesh"], en: "Weak mesh signal", ms: "Isyarat mesh lemah",
+    summaryEn: "Coverage from the second unit is weak or does not reach some rooms.", summaryMs: "Liputan daripada unit kedua lemah atau tidak sampai ke sesetengah bilik.",
+    intake: ["distance", "link_type", "scope"],
+    keywords: ["weak", "lemah", "where to put", "letak", "placement", "kedudukan", "coverage", "liputan", "lousy", "teruk", "upstairs", "tingkat atas", "signal", "isyarat", "one bar", "satu bar", "slow", "perlahan", "lembab"] },
+  { key: "mesh_unstable", modes: ["mesh"], en: "Unstable mesh connection", ms: "Sambungan mesh tidak stabil",
+    summaryEn: "The connection between the units comes and goes.", summaryMs: "Sambungan antara unit datang dan pergi.",
     intake: ["distance", "link_type", "scope", "started"],
-    keywords: ["weak", "lemah", "unstable", "tidak stabil", "drop", "where to put", "letak", "placement", "kedudukan", "coverage", "liputan", "lousy", "teruk", "upstairs", "tingkat atas", "kejap ada", "signal"] },
+    keywords: ["unstable", "tidak stabil", "kejap ada", "on and off", "intermittent", "sekejap", "lag", "flicker", "jumping", "tak konsisten", "inconsistent"] },
+  { key: "mesh_drops", modes: ["mesh"], en: "Mesh connection keeps dropping", ms: "Sambungan mesh asyik terputus",
+    summaryEn: "Devices lose the connection and reconnect by themselves.", summaryMs: "Peranti terputus sambungan dan bersambung semula dengan sendirinya.",
+    intake: ["scope", "link_type", "started", "restarted"],
+    keywords: ["drop", "dropping", "terputus", "putus putus", "disconnect", "keeps disconnecting", "asyik putus", "reconnect", "sambung semula", "cut off", "every few minutes", "setiap beberapa minit", "malam"] },
+  { key: "mesh_restart_retry", modes: ["mesh"], en: "Restart the units and try pairing again", ms: "Mulakan semula unit dan cuba pairing semula",
+    summaryEn: "The safe first thing to try before anything else.", summaryMs: "Perkara selamat pertama untuk dicuba sebelum yang lain.",
+    intake: ["restarted", "unit_role", "tried"],
+    keywords: ["restart", "mulakan semula", "reboot", "turn off", "tutup buka", "off on", "retry", "cuba lagi", "try again", "power cycle", "unplug", "cabut plug"] },
   { key: "mesh_wired_backhaul", modes: ["mesh"], en: "Wired (Ethernet) mesh connection", ms: "Sambungan mesh berwayar (Ethernet)",
     summaryEn: "Connecting mesh units with a cable, or the cable link is not used.", summaryMs: "Menyambung unit mesh dengan kabel, atau sambungan kabel tidak digunakan.",
     intake: ["link_type", "unit_role", "restarted"],

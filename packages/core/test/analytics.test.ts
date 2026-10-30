@@ -52,3 +52,25 @@ describe("analytics taxonomy additions", () => {
     expect(validateClientEvent({ ...base, name: "flow_step", props: { flow_id: "6f1c1f9e-6c35-4b8e-9a7c-2c0a3c1d1a11", step_key: "x", action: "typed" } })).toBeNull();
   });
 });
+
+describe("Malaysian region codes", () => {
+  it("maps dataset spellings to ISO 3166-2:MY and rejects anything else", async () => {
+    const { malaysiaRegionCode } = await import("../src/analytics");
+    expect(malaysiaRegionCode("Selangor")).toBe("MY-10");
+    expect(malaysiaRegionCode("Penang")).toBe("MY-07");
+    expect(malaysiaRegionCode("Pulau Pinang")).toBe("MY-07");
+    expect(malaysiaRegionCode("Wilayah Persekutuan Kuala Lumpur")).toBe("MY-14");
+    expect(malaysiaRegionCode("Malacca")).toBe("MY-04");
+    expect(malaysiaRegionCode("MY-16")).toBe("MY-16");
+    expect(malaysiaRegionCode("MY-99")).toBeNull();
+    expect(malaysiaRegionCode("Jakarta")).toBeNull();
+    expect(malaysiaRegionCode(null)).toBeNull();
+  });
+  it("accepts the assistant and troubleshooting view events with bounded values", async () => {
+    const { validateClientEvent } = await import("../src/analytics");
+    expect(validateClientEvent({ ...base, name: "assistant_opened", props: { entry: "launcher", has_model: false } })).not.toBeNull();
+    expect(validateClientEvent({ ...base, name: "flow_step_viewed", props: { flow_id: base.event_id, step_key: "s1", position: 1 } })).not.toBeNull();
+    expect(validateClientEvent({ ...base, name: "ai_unavailable", props: { support_session: "abcdefghijklmnop1234" } })).not.toBeNull();
+    expect(validateClientEvent({ ...base, name: "assistant_opened", props: { entry: "launcher", has_model: false, text: "hello" } })).toBeNull();
+  });
+});

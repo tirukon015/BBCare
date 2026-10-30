@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Dictionary } from "@/i18n";
 import type { RouterFlow } from "@/modules/router/service";
 import { track } from "@/lib/client/analytics";
+import { useReportFlowStep } from "../assistant/router-context";
 
 /**
  * Step-by-step runner for a verified router flow. Shows the expected result after each step,
@@ -16,6 +17,11 @@ export function RouterFlowRunner({ flow, t, escalation }: { flow: RouterFlow; t:
   const [outcome, setOutcome] = useState<null | "resolved" | "escalate">(null);
   const [ack, setAck] = useState<Record<string, boolean>>({});
   const current = flow.steps.find((s) => s.key === history.at(-1)) ?? start;
+  useReportFlowStep(outcome ? null : current.key);
+  useEffect(() => {
+    if (!outcome) track("flow_step_viewed", { flow_id: flow.id, step_key: current.key, position: Math.min(100, history.length) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one view event per step shown
+  }, [current.key, outcome]);
 
   if (outcome === "escalate") return <>{escalation}</>;
   if (outcome === "resolved") {

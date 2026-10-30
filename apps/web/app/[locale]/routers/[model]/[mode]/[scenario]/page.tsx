@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { INTAKE_QUESTIONS, scenarioByKey, type SupportMode } from "@bbcare/core";
+import { INTAKE_QUESTIONS, isCustomerSupportMode, scenarioByKey, type SupportMode } from "@bbcare/core";
 import { getDictionary, localeOrDefault } from "@/i18n";
 import { env } from "@/lib/env";
 import { getRouterModel, getVerifiedRouterFlow, resourcesForScenario } from "@/modules/router/service";
@@ -12,10 +12,11 @@ import { RouterEscalation, type IntakeView } from "@/components/router/router-es
 import { RouterFlowRunner } from "@/components/router/router-flow";
 import { Container, Notice, SectionHeading } from "@/components/ui";
 import { TrackOnMount } from "@/components/track-on-mount";
+import { SetRouterContext } from "@/components/assistant/router-context";
 
 export const dynamic = "force-dynamic";
 
-const asMode = (v: string): SupportMode | null => (v === "mesh" || v === "ap" ? v : null);
+const asMode = (v: string): SupportMode | null => (isCustomerSupportMode(v) ? v : null);
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string; model: string; scenario: string }> }): Promise<Metadata> {
   const { locale, model, scenario } = await params;
@@ -54,9 +55,10 @@ export default async function RouterScenarioPage({ params, searchParams }: { par
   return (
     <Container className="max-w-3xl py-8">
       <TrackOnMount name="router_scenario_selected" props={{ model_id: model.id, mode, scenario: scenario.key, verified: !!flow }} />
+      <SetRouterContext model={{ slug: model.slug, name: model.name, ecr: model.ecr }} mode={mode} scenario={{ key: scenario.key, title: ms ? scenario.ms : scenario.en }} verified={!!flow} />
       <ModelHeader model={model} locale={locale} t={t} compact />
       <p className="mt-4 text-sm text-muted">
-        <Link href={`/${locale}/routers/${model.slug}/${mode}`} className="text-olive underline">{t.router.modes[mode]}</Link>
+        <Link href={`/${locale}/routers/${model.slug}/${mode}`} className="text-primary underline">{t.router.modes[mode]}</Link>
       </p>
       <h2 className="mt-1 text-2xl font-bold" data-testid="scenario-title">{ms ? scenario.ms : scenario.en}</h2>
       <p className="mb-5 text-ink-soft">{ms ? scenario.summaryMs : scenario.summaryEn}</p>
@@ -73,7 +75,7 @@ export default async function RouterScenarioPage({ params, searchParams }: { par
             <ul className="space-y-1 text-sm" data-testid="flow-sources">
               {flow.sources.map((s) => (
                 <li key={s.title}>
-                  {s.url ? <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-olive underline">{s.title}</a> : s.title}
+                  {s.url ? <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">{s.title}</a> : s.title}
                   {s.publisher ? ` (${s.publisher})` : ""}{s.locator ? `, ${t.router.sourceSection}: ${s.locator}` : ""}
                 </li>
               ))}

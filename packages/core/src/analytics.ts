@@ -69,6 +69,12 @@ export const EVENT_PROPS = {
     time_on_page_s: z.number().int().min(0).max(86_400).optional(),
   }),
   ui_click: z.strictObject({ element_key: z.string().regex(/^[a-z0-9_.-]{1,64}$/) }),
+  /** The AI assistant panel or page was opened; which entry point, and whether a router was known. */
+  assistant_opened: z.strictObject({ entry: z.enum(["launcher", "inline", "page"]), has_model: z.boolean() }),
+  /** The assistant could not reach the AI model and fell back to guides. */
+  ai_unavailable: z.strictObject({ support_session: id }),
+  /** A troubleshooting step was shown (view, not an action). */
+  flow_step_viewed: z.strictObject({ flow_id: uuid, step_key: z.string().regex(/^[a-z0-9_-]{1,40}$/), position: z.number().int().min(1).max(100) }),
   performance_error: z.strictObject({
     kind: z.enum(["web_vital", "js_error", "api_error"]),
     name: z.string().max(64),
@@ -154,6 +160,23 @@ export const MY_REGIONS: Record<string, string> = {
   "MY-15": "W.P. Labuan",
   "MY-16": "W.P. Putrajaya",
 };
+
+/** Names used by IP geolocation datasets for Malaysian states, mapped to ISO 3166-2:MY codes. */
+const MY_REGION_NAMES: Record<string, string> = {
+  johor: "MY-01", kedah: "MY-02", kelantan: "MY-03", melaka: "MY-04", malacca: "MY-04", "negeri sembilan": "MY-05", pahang: "MY-06",
+  "pulau pinang": "MY-07", penang: "MY-07", perak: "MY-08", perlis: "MY-09", selangor: "MY-10", terengganu: "MY-11", sabah: "MY-12", sarawak: "MY-13",
+  "kuala lumpur": "MY-14", "wilayah persekutuan kuala lumpur": "MY-14", "w.p. kuala lumpur": "MY-14", "federal territory of kuala lumpur": "MY-14",
+  labuan: "MY-15", "wilayah persekutuan labuan": "MY-15", "w.p. labuan": "MY-15", putrajaya: "MY-16", "wilayah persekutuan putrajaya": "MY-16", "w.p. putrajaya": "MY-16",
+};
+
+/** ISO 3166-2:MY code for a state name as geolocation datasets spell it, or null when it is not a Malaysian state. */
+export function malaysiaRegionCode(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const n = name.trim();
+  if (/^MY-\d{2}$/.test(n)) return n in MY_REGIONS ? n : null;
+  const key = n.toLowerCase().replace(/\s+/g, " ").replace(/^(state of|negeri) /, "");
+  return MY_REGION_NAMES[key] ?? null;
+}
 
 /** Minimum count before a geographic cell is shown in dashboards. */
 export const GEO_SUPPRESSION_THRESHOLD = 10;

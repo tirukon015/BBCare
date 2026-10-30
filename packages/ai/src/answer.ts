@@ -19,6 +19,7 @@ export async function generateGroundedAnswer(
     evidence: Evidence[];
     products: ProductCandidate[];
     history?: ChatMessage[];
+    context?: string | null;
     signal?: AbortSignal;
   },
 ): Promise<AnswerResult> {
