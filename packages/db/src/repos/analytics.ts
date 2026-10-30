@@ -101,8 +101,13 @@ export async function rollupDay(sql: Sql, day: string): Promise<number> {
     // Geography: one state (or country) per session, taken from the first event of the session on the
     // day, then what that session did. Counts only; no coordinates, no addresses.
     await tx`
-      WITH g AS (SELECT DISTINCT ON (session_id) session_id, COALESCE(country, '') AS country, COALESCE(region, '') AS region, COALESCE(city, '') AS city, visitor_id, COALESCE(channel, 'unknown') AS channel
-                 FROM analytics.events WHERE received_at >= ${day}::date AND received_at < ${day}::date + 1 ORDER BY session_id, occurred_at),
+      WITH g AS (SELECT session_id,
+                   COALESCE((array_agg(country ORDER BY occurred_at) FILTER (WHERE country IS NOT NULL))[1], '') AS country,
+                   COALESCE((array_agg(region ORDER BY occurred_at) FILTER (WHERE region IS NOT NULL))[1], '') AS region,
+                   COALESCE((array_agg(city ORDER BY occurred_at) FILTER (WHERE city IS NOT NULL))[1], '') AS city,
+                   max(visitor_id) AS visitor_id,
+                   COALESCE((array_agg(channel ORDER BY (name <> 'session_started'), occurred_at) FILTER (WHERE channel IS NOT NULL))[1], 'unknown') AS channel
+                 FROM analytics.events WHERE received_at >= ${day}::date AND received_at < ${day}::date + 1 GROUP BY session_id),
            a AS (SELECT session_id,
                    count(*) FILTER (WHERE name = 'page_view') AS page_views,
                    bool_or(name = 'session_started' AND NOT EXISTS (SELECT 1 FROM analytics.events p WHERE p.session_id = e.session_id AND p.received_at < ${day}::date)) AS new_session,

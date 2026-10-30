@@ -160,9 +160,10 @@ d("database integration (real Postgres)", () => {
 
   it("aggregates sessions by Malaysian state and country, without storing addresses or coordinates", async () => {
     const [model] = await sql<{ id: string }[]>`SELECT id::text FROM catalog.product_models WHERE slug = 'tp-link-ex510'`;
-    const t = (sec: number) => new Date(Date.now() - 120_000 + sec * 1000);
+    let tick = 0;
+    const t = () => new Date(Date.now() - 120_000 + tick++ * 1000);
     const ins = (sid: string, name: string, props: Record<string, unknown>, extra: Record<string, unknown>) =>
-      sql`INSERT INTO analytics.events ${sql({ id: crypto.randomUUID(), name, occurred_at: t(Math.random() * 60), session_id: sid, consent: "essential", page_type: "home", device_category: "mobile", props: sql.json(props as never), ...extra })}`;
+      sql`INSERT INTO analytics.events ${sql({ id: crypto.randomUUID(), name, occurred_at: t(), session_id: sid, consent: "essential", page_type: "home", device_category: "mobile", props: sql.json(props as never), ...extra })}`;
     // Synthetic sessions: three in Selangor (one with a consented city), one in Kuala Lumpur, one in Singapore, one unknown.
     for (const [sid, extra] of [
       ["geo-sel-1", { country: "MY", region: "MY-10", city: "Shah Alam", consent: "analytics", visitor_id: "geo-visitor-1", channel: "shopee" }],
