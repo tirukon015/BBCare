@@ -52,3 +52,23 @@ export function BarList({ rows, empty = "No data yet." }: { rows: { label: strin
     </ol>
   );
 }
+
+/** 10 by 10 click-density grid of a viewport. Darker cells received more clicks; cells list their share as text. */
+export function ClickGrid({ title, total, cells }: { title: string; total: number; cells: { x: number; y: number; value: number }[] }) {
+  const max = Math.max(1, ...cells.map((c) => c.value));
+  const lookup = new Map(cells.map((c) => [`${c.x},${c.y}`, c.value]));
+  const rows = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90];
+  return (
+    <figure className="rounded-[var(--radius-card)] border border-line bg-white p-3">
+      <figcaption className="mb-2 text-sm font-medium">{title} <span className="text-muted">· {total} clicks</span></figcaption>
+      <div className="grid aspect-[4/3] grid-cols-10 gap-px overflow-hidden rounded border border-line bg-line" role="img" aria-label={`${title}: click density grid`}>
+        {rows.flatMap((y) => rows.map((x) => {
+          const v = lookup.get(`${x},${y}`) ?? 0;
+          const alpha = v ? 0.15 + 0.85 * (v / max) : 0;
+          return <div key={`${x},${y}`} title={`${x}-${x + 10}% across, ${y}-${y + 10}% down: ${v} click${v === 1 ? "" : "s"}`} className="bg-white" style={{ backgroundColor: v ? `color-mix(in srgb, var(--color-chart) ${Math.round(alpha * 100)}%, white)` : undefined }} />;
+        }))}
+      </div>
+      <p className="sr-only">{cells.sort((a, b) => b.value - a.value).slice(0, 5).map((c) => `${c.x}%,${c.y}%: ${c.value}`).join("; ")}</p>
+    </figure>
+  );
+}

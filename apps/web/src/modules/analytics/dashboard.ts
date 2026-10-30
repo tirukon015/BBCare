@@ -74,3 +74,10 @@ export async function exportRows(days: Range) {
     SELECT day::text, metric, dim1, dim2, value::int FROM analytics.agg_daily
     WHERE day >= current_date - ${days - 1}::int AND metric NOT IN ('regions') ORDER BY day, metric, dim1 LIMIT 50000`;
 }
+
+/** Aggregate rows for an arbitrary date window (inclusive), used by the CSV export for all period presets. */
+export async function exportRowsBetween(from: string, to: string) {
+  return db()<{ day: string; metric: string; dim1: string; dim2: string; value: number }[]>`
+    SELECT day::text, metric, dim1, dim2, value::int FROM analytics.agg_daily
+    WHERE day >= ${from}::date AND day <= ${to}::date AND metric NOT IN ('regions') ORDER BY day, metric, dim1 LIMIT 50000`;
+}

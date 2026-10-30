@@ -29,3 +29,26 @@ describe("analytics validation", () => {
     expect(referrerDomain("not a url")).toBeNull();
   });
 });
+
+describe("analytics taxonomy additions", () => {
+  it("accepts campaign fields and link labels on the envelope", () => {
+    const r = validateClientEvent({ ...base, name: "session_started", props: {}, utm_source: "shopee", utm_medium: "listing", utm_campaign: "ar2140-mesh", utm_content: "box-qr-01", utm_term: "mesh", ch: "shopee" });
+    expect(r).not.toBeNull();
+    expect(r?.utm_content).toBe("box-qr-01");
+    expect(r?.ch).toBe("shopee");
+  });
+  it("accepts journey, heatmap and media events with bounded values", () => {
+    const model = "6f1c1f9e-6c35-4b8e-9a7c-2c0a3c1d1a11";
+    expect(validateClientEvent({ ...base, name: "router_scenario_selected", props: { model_id: model, mode: "mesh", scenario: "mesh_pairing_fails", verified: false } })).not.toBeNull();
+    expect(validateClientEvent({ ...base, name: "flow_step", props: { flow_id: model, step_key: "check-lights", action: "next" } })).not.toBeNull();
+    expect(validateClientEvent({ ...base, name: "click_area", props: { x_pct: 40, y_pct: 10, target: "link", viewport: "phone" } })).not.toBeNull();
+    expect(validateClientEvent({ ...base, name: "video_progress", props: { resource_id: model, pct: 50 } })).not.toBeNull();
+    expect(validateClientEvent({ ...base, name: "escalation_submitted", props: { origin: "router", scenario: "mesh_pairing_fails" } })).not.toBeNull();
+  });
+  it("rejects precise coordinates, element text and free values in heatmap events", () => {
+    expect(validateClientEvent({ ...base, name: "click_area", props: { x_pct: 43, y_pct: 10, target: "link", viewport: "phone" } })).toBeNull();
+    expect(validateClientEvent({ ...base, name: "click_area", props: { x_pct: 40, y_pct: 10, target: "link", viewport: "phone", text: "Buy now" } })).toBeNull();
+    expect(validateClientEvent({ ...base, name: "video_progress", props: { resource_id: "6f1c1f9e-6c35-4b8e-9a7c-2c0a3c1d1a11", pct: 33 } })).toBeNull();
+    expect(validateClientEvent({ ...base, name: "flow_step", props: { flow_id: "6f1c1f9e-6c35-4b8e-9a7c-2c0a3c1d1a11", step_key: "x", action: "typed" } })).toBeNull();
+  });
+});

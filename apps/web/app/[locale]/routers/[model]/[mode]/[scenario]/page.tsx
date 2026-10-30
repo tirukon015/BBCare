@@ -11,6 +11,7 @@ import { ModelHeader } from "@/components/router/model-header";
 import { RouterEscalation, type IntakeView } from "@/components/router/router-escalation";
 import { RouterFlowRunner } from "@/components/router/router-flow";
 import { Container, Notice, SectionHeading } from "@/components/ui";
+import { TrackOnMount } from "@/components/track-on-mount";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,7 @@ export default async function RouterScenarioPage({ params, searchParams }: { par
   );
   return (
     <Container className="max-w-3xl py-8">
+      <TrackOnMount name="router_scenario_selected" props={{ model_id: model.id, mode, scenario: scenario.key, verified: !!flow }} />
       <ModelHeader model={model} locale={locale} t={t} compact />
       <p className="mt-4 text-sm text-muted">
         <Link href={`/${locale}/routers/${model.slug}/${mode}`} className="text-olive underline">{t.router.modes[mode]}</Link>

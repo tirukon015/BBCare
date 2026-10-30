@@ -17,7 +17,7 @@ const NAV: { href: string; label: string; permission?: Permission }[] = [
   { href: "/admin/imports", label: "Historical imports", permission: "imports.manage" },
   { href: "/admin/catalog", label: "Catalog", permission: "catalog.read" },
   { href: "/admin/products", label: "Products & listings", permission: "commerce.read" },
-  { href: "/admin/analytics", label: "Analytics", permission: "analytics.read" },
+  { href: "/admin/analytics", label: "Customer Analytics & Intelligence", permission: "analytics.read" },
   { href: "/admin/ai", label: "AI", permission: "ai.read" },
   { href: "/admin/users", label: "Users", permission: "users.manage" },
   { href: "/admin/audit", label: "Audit log", permission: "audit.read" },

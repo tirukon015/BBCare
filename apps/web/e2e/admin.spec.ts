@@ -60,12 +60,12 @@ test.describe("staff administration", () => {
 
   test("analyst sees analytics but not users, cases or transcripts", async ({ page }) => {
     await staffLogin(page, "analyst@bbcare.test");
-    await expect(page.getByRole("link", { name: "Analytics" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Customer Analytics & Intelligence" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Users" })).toHaveCount(0);
     await page.goto("/admin/users");
     await expect(page).toHaveURL(/denied=1/);
     await page.goto("/admin/analytics");
-    await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Customer Analytics & Intelligence" })).toBeVisible();
     await expect(page.getByText("Sessions per day")).toBeVisible();
   });
 

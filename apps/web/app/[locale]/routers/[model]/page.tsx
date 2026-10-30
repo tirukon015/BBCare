@@ -6,6 +6,7 @@ import { getDictionary, localeOrDefault } from "@/i18n";
 import { getRouterModel } from "@/modules/router/service";
 import { ModelHeader } from "@/components/router/model-header";
 import { ButtonLink, Container, SectionHeading } from "@/components/ui";
+import { TrackOnMount } from "@/components/track-on-mount";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function RouterModelPage({ params }: { params: Promise<{ lo
   if (!model) notFound();
   return (
     <Container className="py-8">
+      <TrackOnMount name="router_model_selected" props={{ model_id: model.id, ecr: model.ecr }} />
       <ModelHeader model={model} locale={locale} t={t} />
       <section className="mt-8" aria-labelledby="modes">
         <SectionHeading id="modes">{t.router.chooseMode}</SectionHeading>

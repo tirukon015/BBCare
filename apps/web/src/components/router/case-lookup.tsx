@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import type { Dictionary } from "@/i18n";
 import { inputStyles } from "../ui";
+import { track } from "@/lib/client/analytics";
 
 interface CaseView {
   reference: string; status: string; updatedAt: string; customerNote: string | null; modelName: string | null;
@@ -24,6 +25,7 @@ export function CaseLookup({ locale, t }: { locale: "en" | "ms"; t: Dictionary }
     if (!res.ok) throw new Error(r.caseNotFound);
     setView((await res.json()) as CaseView);
     setCreds({ reference, code });
+    track("case_followup", { action: "lookup" });
   }
 
   async function lookup(ev: FormEvent<HTMLFormElement>) {
@@ -46,6 +48,7 @@ export function CaseLookup({ locale, t }: { locale: "en" | "ms"; t: Dictionary }
       if (!res.ok) throw new Error(t.support.error);
       const data = (await res.json()) as { redacted: boolean };
       form.reset();
+      track("case_followup", { action: "message" });
       setNotice(data.redacted ? `${r.messageSent} ${r.secretRemoved}` : r.messageSent);
       await load(creds.reference, creds.code);
     } catch (e) { setError(e instanceof Error ? e.message : t.support.error); }

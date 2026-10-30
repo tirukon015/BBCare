@@ -12,14 +12,14 @@ export async function rollupDay(sql: Sql, day: string): Promise<number> {
     await tx`
       WITH e AS (SELECT * FROM analytics.events WHERE received_at >= ${day}::date AND received_at < ${day}::date + 1)
       INSERT INTO analytics.agg_daily (day, metric, dim1, dim2, value)
-      SELECT ${day}::date, metric, dim1, dim2, value FROM (
+      SELECT ${day}::date, metric, dim1, COALESCE(dim2, ''), value FROM (
         SELECT 'sessions' AS metric, COALESCE(device_category, '') AS dim1, '' AS dim2, count(DISTINCT session_id) AS value FROM e GROUP BY 2
         UNION ALL SELECT 'visitors_consented', '', '', count(DISTINCT visitor_id) FROM e WHERE visitor_id IS NOT NULL
         UNION ALL SELECT 'visitors_new', '', '', count(DISTINCT e.visitor_id) FROM e WHERE e.visitor_id IS NOT NULL
           AND NOT EXISTS (SELECT 1 FROM analytics.events p WHERE p.visitor_id = e.visitor_id AND p.received_at < ${day}::date)
         UNION ALL SELECT 'page_views', COALESCE(page_type, ''), COALESCE(locale, ''), count(*) FROM e WHERE name = 'page_view' GROUP BY 2, 3
         UNION ALL SELECT 'landing_pages', COALESCE(page_path, ''), '', count(*) FROM e WHERE name = 'page_view' AND (props->>'landing')::boolean IS TRUE GROUP BY 2
-        UNION ALL SELECT 'referrers', COALESCE(referrer_domain, '(direct)'), COALESCE(utm_source, ''), count(*) FROM e WHERE name = 'session_started' GROUP BY 2, 3
+        UNION ALL SELECT 'referrers', COALESCE(referrer_domain, '(no referrer)'), COALESCE(utm_source, ''), count(*) FROM e WHERE name = 'session_started' GROUP BY 2, 3
         UNION ALL SELECT 'searches', lower(props->>'query'), COALESCE(locale, ''), count(*) FROM e WHERE name = 'model_search' AND props ? 'query' GROUP BY 2, 3
         UNION ALL SELECT 'searches_no_results', lower(props->>'query'), COALESCE(locale, ''), count(*) FROM e WHERE name = 'search_no_results' AND props ? 'query' GROUP BY 2, 3
         UNION ALL SELECT 'model_interest', props->>'resolved_model_id', 'search', count(*) FROM e WHERE name = 'model_search' AND props ? 'resolved_model_id' GROUP BY 2
@@ -37,7 +37,67 @@ export async function rollupDay(sql: Sql, day: string): Promise<number> {
         UNION ALL SELECT 'exits', COALESCE(page_type, ''), props->>'max_scroll_pct', count(*) FROM e WHERE name = 'navigation_exit' GROUP BY 2, 3
         UNION ALL SELECT 'ui_clicks', props->>'element_key', COALESCE(page_type, ''), count(*) FROM e WHERE name = 'ui_click' GROUP BY 2, 3
         UNION ALL SELECT 'outbound_clicks', props->>'listing_id', '', count(*) FROM e WHERE name = 'shopee_outbound_click' GROUP BY 2
+        -- Traffic sources: the channel classified at ingest plus the referrer host, per session start.
+        UNION ALL SELECT 'sources', COALESCE(channel, 'unknown'), COALESCE(referrer_domain, ''), count(DISTINCT session_id) FROM e WHERE name = 'session_started' GROUP BY 2, 3
+        UNION ALL SELECT 'link_labels', link_label, '', count(DISTINCT session_id) FROM e WHERE name = 'session_started' AND link_label IS NOT NULL GROUP BY 2
+        UNION ALL SELECT 'campaigns', utm_campaign, COALESCE(utm_source, '') || '/' || COALESCE(utm_medium, ''), count(DISTINCT session_id) FROM e WHERE name = 'session_started' AND utm_campaign IS NOT NULL GROUP BY 2, 3
+        UNION ALL SELECT 'campaign_content', utm_campaign, COALESCE(utm_content, ''), count(DISTINCT session_id) FROM e WHERE name = 'session_started' AND utm_campaign IS NOT NULL AND utm_content IS NOT NULL GROUP BY 2, 3
+        -- Router journey.
+        UNION ALL SELECT 'router_models', props->>'model_id', COALESCE(locale, ''), count(*) FROM e WHERE name = 'router_model_selected' GROUP BY 2, 3
+        UNION ALL SELECT 'router_modes', props->>'model_id', props->>'mode', count(*) FROM e WHERE name = 'router_mode_selected' GROUP BY 2, 3
+        UNION ALL SELECT 'router_scenarios', (props->>'mode') || ':' || (props->>'scenario'), props->>'model_id', count(*) FROM e WHERE name = 'router_scenario_selected' GROUP BY 2, 3
+        UNION ALL SELECT 'router_scenarios_unverified', (props->>'mode') || ':' || (props->>'scenario'), props->>'model_id', count(*) FROM e WHERE name = 'router_scenario_selected' AND (props->>'verified')::boolean IS FALSE GROUP BY 2, 3
+        UNION ALL SELECT 'flow_steps', (props->>'flow_id') || ':' || (props->>'step_key'), props->>'action', count(*) FROM e WHERE name = 'flow_step' GROUP BY 2, 3
+        UNION ALL SELECT 'escalations', props->>'origin', COALESCE(props->>'scenario', ''), count(*) FROM e WHERE name = 'escalation_submitted' GROUP BY 2, 3
+        UNION ALL SELECT 'case_followups', props->>'action', '', count(*) FROM e WHERE name = 'case_followup' GROUP BY 2
+        -- Media.
+        UNION ALL SELECT 'resource_opens', props->>'resource_id', props->>'kind', count(*) FROM e WHERE name = 'resource_open' GROUP BY 2, 3
+        UNION ALL SELECT 'video_progress', props->>'resource_id', props->>'pct', count(*) FROM e WHERE name = 'video_progress' GROUP BY 2, 3
+        UNION ALL SELECT 'resource_feedback', props->>'resource_id', props->>'rating', count(*) FROM e WHERE name = 'resource_feedback' GROUP BY 2, 3
+        -- Interface heatmap: clicks per 10 percent grid cell, per page type and viewport.
+        UNION ALL SELECT 'click_grid', COALESCE(page_type, '') || '|' || (props->>'viewport'), (props->>'x_pct') || ',' || (props->>'y_pct'), count(*) FROM e WHERE name = 'click_area' GROUP BY 2, 3
       ) t WHERE dim1 IS NOT NULL`;
+    // Navigation paths: consecutive page views within a session (page types only).
+    await tx`
+      WITH v AS (
+        SELECT session_id, COALESCE(page_type, '') AS pt, lag(COALESCE(page_type, '')) OVER (PARTITION BY session_id ORDER BY occurred_at) AS prev
+        FROM analytics.events WHERE received_at >= ${day}::date AND received_at < ${day}::date + 1 AND name = 'page_view')
+      INSERT INTO analytics.agg_daily (day, metric, dim1, dim2, value)
+      SELECT ${day}::date, 'nav_paths', prev, pt, count(*) FROM v WHERE prev IS NOT NULL AND prev <> pt GROUP BY prev, pt
+      ON CONFLICT (day, metric, dim1, dim2) DO UPDATE SET value = EXCLUDED.value`;
+    // Where support journeys end: the last page type of sessions that chose a router problem or
+    // started the assistant but neither resolved nor escalated on the day.
+    await tx`
+      WITH s AS (
+        SELECT session_id,
+          bool_or(name = 'router_scenario_selected') AS scenario, bool_or(name = 'support_started') AS support,
+          bool_or(name IN ('support_resolved', 'escalation_submitted', 'support_escalated')) AS ended,
+          bool_or(name = 'flow_step' AND props->>'action' = 'resolved') AS flow_resolved,
+          (array_agg(COALESCE(page_type, '') ORDER BY occurred_at DESC) FILTER (WHERE name = 'page_view'))[1] AS last_page
+        FROM analytics.events WHERE received_at >= ${day}::date AND received_at < ${day}::date + 1 GROUP BY session_id)
+      INSERT INTO analytics.agg_daily (day, metric, dim1, dim2, value)
+      SELECT ${day}::date, 'journey_exit', COALESCE(last_page, ''), stage, n FROM (
+        SELECT last_page, 'left_after_problem' AS stage, count(*) AS n FROM s WHERE scenario AND NOT ended AND NOT flow_resolved GROUP BY last_page
+        UNION ALL SELECT last_page, 'left_after_assistant', count(*) FROM s WHERE support AND NOT scenario AND NOT ended GROUP BY last_page) x
+      WHERE n > 0
+      ON CONFLICT (day, metric, dim1, dim2) DO UPDATE SET value = EXCLUDED.value`;
+    // Sessions per channel that went on to a router selection, a support request or an escalation.
+    await tx`
+      WITH c AS (SELECT DISTINCT ON (session_id) session_id, COALESCE(channel, 'unknown') AS channel, utm_campaign FROM analytics.events
+                 WHERE received_at >= ${day}::date AND received_at < ${day}::date + 1 AND name = 'session_started' ORDER BY session_id, occurred_at),
+           a AS (SELECT session_id, bool_or(name = 'router_model_selected') AS router, bool_or(name IN ('support_started', 'router_scenario_selected')) AS support,
+                        bool_or(name IN ('escalation_submitted', 'support_escalated')) AS escalated, bool_or(name = 'resource_open') AS media
+                 FROM analytics.events WHERE received_at >= ${day}::date AND received_at < ${day}::date + 1 GROUP BY session_id)
+      INSERT INTO analytics.agg_daily (day, metric, dim1, dim2, value)
+      SELECT ${day}::date, m.metric, m.dim1, '', m.n FROM (
+        SELECT 'channel_router' AS metric, c.channel AS dim1, count(*) FILTER (WHERE a.router) AS n FROM c JOIN a USING (session_id) GROUP BY c.channel
+        UNION ALL SELECT 'channel_support', c.channel, count(*) FILTER (WHERE a.support) FROM c JOIN a USING (session_id) GROUP BY c.channel
+        UNION ALL SELECT 'channel_escalated', c.channel, count(*) FILTER (WHERE a.escalated) FROM c JOIN a USING (session_id) GROUP BY c.channel
+        UNION ALL SELECT 'channel_media', c.channel, count(*) FILTER (WHERE a.media) FROM c JOIN a USING (session_id) GROUP BY c.channel
+        UNION ALL SELECT 'campaign_support', c.utm_campaign, count(*) FILTER (WHERE a.support) FROM c JOIN a USING (session_id) WHERE c.utm_campaign IS NOT NULL GROUP BY c.utm_campaign
+        UNION ALL SELECT 'campaign_escalated', c.utm_campaign, count(*) FILTER (WHERE a.escalated) FROM c JOIN a USING (session_id) WHERE c.utm_campaign IS NOT NULL GROUP BY c.utm_campaign
+      ) m WHERE m.n > 0
+      ON CONFLICT (day, metric, dim1, dim2) DO UPDATE SET value = EXCLUDED.value`;
     // Commerce impressions and clicks from the recommendations table (server-side truth).
     await tx`
       INSERT INTO analytics.agg_daily (day, metric, dim1, dim2, value)

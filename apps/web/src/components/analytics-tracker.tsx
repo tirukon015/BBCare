@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useReportWebVitals } from "next/web-vitals";
 import { useEffect, useRef } from "react";
-import { flushOnExit, sessionId, track } from "@/lib/client/analytics";
+import { flushOnExit, sessionId, track, viewportBucket } from "@/lib/client/analytics";
 import { captureTouch } from "@/lib/client/attribution";
 
 /** Page views, scroll depth on exit, tagged clicks, web vitals and JS errors. */
@@ -40,9 +40,16 @@ export function AnalyticsTracker() {
       maxScroll.current = Math.max(maxScroll.current, Math.min(100, pct));
     };
     const onClick = (e: MouseEvent) => {
-      const el = (e.target as HTMLElement | null)?.closest<HTMLElement>("[data-track]");
+      const target = e.target as HTMLElement | null;
+      const el = target?.closest<HTMLElement>("[data-track]");
       const key = el?.dataset.track;
       if (key && /^[a-z0-9_.-]{1,64}$/.test(key)) track("ui_click", { element_key: key });
+      // Interface heatmap: a 10 percent grid cell and the element kind. Never the text or any value.
+      if (target && e.isTrusted && window.innerWidth > 0 && window.innerHeight > 0) {
+        const kind = target.closest("a") ? "link" : target.closest("button") ? "button" : target.closest("input, select, textarea") ? "input" : "other";
+        const cell = (v: number, max: number) => Math.min(90, Math.max(0, Math.floor((v / max) * 10) * 10));
+        track("click_area", { x_pct: cell(e.clientX, window.innerWidth), y_pct: cell(e.clientY, window.innerHeight), target: kind, viewport: viewportBucket() });
+      }
     };
     const onError = (e: ErrorEvent) => track("performance_error", { kind: "js_error", name: (e.error?.name ?? "Error").slice(0, 64), route: location.pathname.slice(0, 200) });
     const onHide = () => {

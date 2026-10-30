@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { eventBatchSchema, validateClientEvent, type ValidatedEvent } from "@bbcare/core";
 import { ingestEvents } from "@/modules/analytics/ingest";
+import { ownHosts } from "@/modules/support/attribution";
 import { rateLimit } from "@/lib/rate-limit";
 import { clientIpFrom, jsonError, readJson } from "@/lib/request";
 
@@ -20,6 +21,6 @@ export async function POST(req: Request) {
   const valid = batch.data.events.map(validateClientEvent).filter((e): e is ValidatedEvent => e !== null);
   const consentCookie = (await cookies()).get("bbcare_consent")?.value ?? "";
   const consent = decodeURIComponent(consentCookie).endsWith(":analytics") ? "analytics" : "essential";
-  const stored = await ingestEvents(valid, { ip, userAgent: req.headers.get("user-agent") ?? "", consent });
+  const stored = await ingestEvents(valid, { ip, userAgent: req.headers.get("user-agent") ?? "", consent, ownHosts: ownHosts(req) });
   return Response.json({ accepted: stored, rejected: batch.data.events.length - valid.length }, { status: 202 });
 }

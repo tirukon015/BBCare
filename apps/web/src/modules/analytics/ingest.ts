@@ -1,12 +1,12 @@
 import "server-only";
-import { classifyUserAgent, referrerDomain, sanitizePath, scrubPersonalData, type ValidatedEvent } from "@bbcare/core";
+import { classifyChannel, classifyUserAgent, referrerDomain, sanitizePath, scrubPersonalData, type ValidatedEvent } from "@bbcare/core";
 import { db } from "@/lib/db";
 import { lookupRegion } from "@/lib/geo";
 
 const TEXT_PROPS = ["query"] as const;
 
 /** Store validated events. Free-text properties are scrubbed of personal data. */
-export async function ingestEvents(events: ValidatedEvent[], ctx: { ip: string; userAgent: string; consent: "analytics" | "essential" }) {
+export async function ingestEvents(events: ValidatedEvent[], ctx: { ip: string; userAgent: string; consent: "analytics" | "essential"; ownHosts?: string[] }) {
   const ua = classifyUserAgent(ctx.userAgent);
   if (ua.deviceCategory === "bot" || events.length === 0) return 0;
   const geo = lookupRegion(ctx.ip);
@@ -26,6 +26,11 @@ export async function ingestEvents(events: ValidatedEvent[], ctx: { ip: string; 
       utm_source: e.utm_source ?? null,
       utm_medium: e.utm_medium ?? null,
       utm_campaign: e.utm_campaign ?? null,
+      utm_content: e.utm_content ?? null,
+      utm_term: e.utm_term ?? null,
+      link_label: e.ch?.toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40) || null,
+      // Same rules as support attribution: link label, then UTM, then referrer host; otherwise unknown.
+      channel: classifyChannel({ referrer: e.referrer, utm_source: e.utm_source, utm_medium: e.utm_medium, ch: e.ch }, ctx.ownHosts ?? []).channel,
       locale: e.locale,
       device_category: ua.deviceCategory,
       browser_family: ua.browserFamily,

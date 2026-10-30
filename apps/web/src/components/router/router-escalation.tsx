@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import type { Dictionary } from "@/i18n";
 import { attributionPayload } from "@/lib/client/attribution";
+import { track } from "@/lib/client/analytics";
 import { inputStyles } from "../ui";
 
 export interface IntakeView { key: string; label: string; options: { key: string; label: string }[] }
@@ -55,6 +56,7 @@ export function RouterEscalation({ locale, t, modelEcr, mode, scenario, subject,
       if (res.status === 429) throw new Error(t.support.rateLimited);
       if (!res.ok) throw new Error(t.support.error);
       setResult((await res.json()) as { reference: string; followUpCode: string; redacted: boolean });
+      track("escalation_submitted", { origin: "router", scenario });
     } catch (err) {
       setError(err instanceof Error ? err.message : t.support.error);
     } finally {

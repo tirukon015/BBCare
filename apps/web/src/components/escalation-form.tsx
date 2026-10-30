@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import type { Dictionary } from "@/i18n";
 import { attributionPayload } from "@/lib/client/attribution";
+import { track } from "@/lib/client/analytics";
 import { inputStyles } from "./ui";
 
 interface Props {
@@ -46,6 +47,7 @@ export function EscalationForm({ locale, t, sessionId, contacts, onClose, defaul
       if (res.status === 429) throw new Error(t.support.rateLimited);
       if (!res.ok) throw new Error(t.support.error);
       const data = (await res.json()) as { reference: string };
+      track("escalation_submitted", { origin: sessionId ? "chat" : "form" });
       setReference(data.reference);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.support.error);

@@ -37,6 +37,26 @@ export const EVENT_PROPS = {
   article_feedback: z.strictObject({ article_id: uuid, rating: z.union([z.literal(-1), z.literal(1)]) }),
   resource_open: z.strictObject({ resource_id: uuid, kind: z.enum(["video", "diagram", "image", "document"]) }),
   resource_feedback: z.strictObject({ resource_id: uuid, rating: z.union([z.literal(-1), z.literal(1)]) }),
+  /** Video playback milestones; the player reports the furthest quarter reached. */
+  video_progress: z.strictObject({ resource_id: uuid, pct: z.union([z.literal(25), z.literal(50), z.literal(75), z.literal(100)]) }),
+  /** Router journey: which model, mode and problem a visitor chose (ids only). */
+  router_model_selected: z.strictObject({ model_id: uuid, ecr: z.string().regex(/^[A-Z0-9]{2,6}$/) }),
+  router_mode_selected: z.strictObject({ model_id: uuid, mode: z.enum(["mesh", "ap"]) }),
+  router_scenario_selected: z.strictObject({ model_id: uuid, mode: z.enum(["mesh", "ap"]), scenario: z.string().regex(/^[a-z0-9_]{3,40}$/), verified: z.boolean() }),
+  /** Step-by-step flow progress: step key and what the visitor did there. */
+  flow_step: z.strictObject({ flow_id: uuid, step_key: z.string().regex(/^[a-z0-9_-]{1,40}$/), action: z.enum(["next", "back", "resolved", "escalate", "restart"]) }),
+  escalation_submitted: z.strictObject({ origin: z.enum(["chat", "router", "form"]), scenario: z.string().regex(/^[a-z0-9_]{3,40}$/).optional() }),
+  case_followup: z.strictObject({ action: z.enum(["lookup", "message"]) }),
+  /**
+   * Coarse click position for interface heatmaps: a 10 percent grid cell of the viewport and the
+   * kind of element, never the element text, coordinates or any input value.
+   */
+  click_area: z.strictObject({
+    x_pct: z.number().int().min(0).max(90).multipleOf(10),
+    y_pct: z.number().int().min(0).max(90).multipleOf(10),
+    target: z.enum(["link", "button", "input", "other"]),
+    viewport: z.enum(["phone", "tablet", "desktop"]),
+  }),
   recommendation_shown: z.strictObject({
     recommendation_id: uuid,
     product_id: uuid,
@@ -75,6 +95,10 @@ export const clientEventSchema = z.strictObject({
   utm_source: z.string().max(100).optional(),
   utm_medium: z.string().max(100).optional(),
   utm_campaign: z.string().max(100).optional(),
+  utm_content: z.string().max(100).optional(),
+  utm_term: z.string().max(100).optional(),
+  /** Explicit channel label carried by the link (`?ch=shopee`). */
+  ch: z.string().max(40).optional(),
   locale: z.enum(["en", "ms"]),
   props: z.record(z.string(), z.unknown()).default({}),
 });

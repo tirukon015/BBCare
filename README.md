@@ -45,7 +45,8 @@ pnpm --filter @bbcare/web lint
 pnpm --filter @bbcare/core --filter @bbcare/ai --filter @bbcare/web test     # unit tests
 DATABASE_URL_TEST=postgres://.../bbcare_test pnpm --filter @bbcare/db test   # integration tests (resets the _test database)
 pnpm --filter @bbcare/evals eval:retrieval                                   # retrieval evaluation gate (needs a database seeded with BBCARE_SEED_SAMPLES=1)
-pnpm --filter @bbcare/web test:e2e                                           # Playwright: desktop, Android, iPhone, iPad
+pnpm --filter @bbcare/web test:e2e                                           # Playwright: desktop, Android, iPhone, iPad (CI runs it against a build:
+#   NEXT_DIST_DIR=.next-e2e pnpm exec next build && E2E_SERVER_COMMAND="pnpm exec next start -p 3100" pnpm exec playwright test)
 ```
 GitHub Actions runs all of these on every push (`.github/workflows/ci.yml`).
 

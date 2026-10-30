@@ -9,6 +9,15 @@ export interface ResourceView { id: string; kind: string; title: string; descrip
 /** Approved library resources for a scenario, with usage tracking and a helpful / not helpful vote. */
 export function ResourceList({ items, t }: { items: ResourceView[]; t: Dictionary }) {
   const [voted, setVoted] = useState<Record<string, 1 | -1>>({});
+  const [reached, setReached] = useState<Record<string, number>>({});
+  // Report each quarter of a video once; the player's own position is the only input.
+  function reportProgress(id: string, video: HTMLVideoElement | null, force?: 100) {
+    const pct = force ?? (video && video.duration > 0 ? Math.floor((video.currentTime / video.duration) * 4) * 25 : 0);
+    const milestone = Math.min(100, pct) as 0 | 25 | 50 | 75 | 100;
+    if (milestone === 0 || (reached[id] ?? 0) >= milestone) return;
+    setReached((m) => ({ ...m, [id]: milestone }));
+    track("video_progress", { resource_id: id, pct: milestone });
+  }
   if (items.length === 0) return null;
   const kinds = t.router.resourceKinds as Record<string, string>;
   async function vote(id: string, rating: 1 | -1) {
@@ -31,7 +40,8 @@ export function ResourceList({ items, t }: { items: ResourceView[]; t: Dictionar
               {r.description ? <p className="mt-1 text-sm text-ink-soft">{r.description}</p> : null}
               <div className="mt-3">
                 {r.kind === "video" && r.mimeType.startsWith("video/") ? (
-                  <video controls preload="metadata" className="max-h-80 w-full rounded-lg border border-line bg-black" onPlay={() => track("resource_open", { resource_id: r.id, kind })}>
+                  <video controls preload="metadata" className="max-h-80 w-full rounded-lg border border-line bg-black" onPlay={() => track("resource_open", { resource_id: r.id, kind })}
+                    onTimeUpdate={(e) => reportProgress(r.id, e.currentTarget)} onEnded={() => reportProgress(r.id, null, 100)}>
                     <source src={href} type={r.mimeType} />
                   </video>
                 ) : r.mimeType.startsWith("image/") ? (

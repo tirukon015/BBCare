@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attributionInputSchema, classifyChannel, demandGroupKey, describeRequirement, inferResourceType, normalizeHardwareRevision } from "../src/demand";
+import { SOURCE_GROUPS, attributionInputSchema, classifyChannel, demandGroupKey, describeRequirement, inferResourceType, normalizeHardwareRevision, sourceGroup } from "../src/demand";
 
 describe("support channel classification", () => {
   const own = ["support.bbtech.com.my"];
@@ -64,5 +64,22 @@ describe("demand grouping", () => {
   it("describes the requirement for staff", () => {
     expect(describeRequirement({ modelName: "Kaon AR2140", scenarioTitle: "Mesh pairing does not work", resourceType: "video", locale: "ms", hardwareRevision: null }))
       .toBe("Video in Malay: Kaon AR2140, Mesh pairing does not work");
+  });
+});
+
+describe("traffic source groups", () => {
+  it("groups by explicit channel first and by referrer host otherwise", () => {
+    expect(sourceGroup("shopee", "www.google.com")).toBe("shopee");
+    expect(sourceGroup("qr_code", null)).toBe("qr_code");
+    expect(sourceGroup("other", "www.google.com.my")).toBe("google");
+    expect(sourceGroup("other", "www.bing.com")).toBe("search");
+    expect(sourceGroup("other", "l.facebook.com")).toBe("social");
+    expect(sourceGroup("other", "forum.lowyat.net")).toBe("referral");
+    expect(sourceGroup("other", null)).toBe("labelled");
+  });
+  it("keeps unknown as unknown and never calls it direct", () => {
+    expect(sourceGroup("unknown", null)).toBe("unknown");
+    expect(sourceGroup("unknown", "www.google.com")).toBe("unknown");
+    expect(SOURCE_GROUPS).not.toContain("direct");
   });
 });

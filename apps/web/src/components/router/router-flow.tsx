@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import type { Dictionary } from "@/i18n";
 import type { RouterFlow } from "@/modules/router/service";
+import { track } from "@/lib/client/analytics";
 
 /**
  * Step-by-step runner for a verified router flow. Shows the expected result after each step,
@@ -22,7 +23,7 @@ export function RouterFlowRunner({ flow, t, escalation }: { flow: RouterFlow; t:
       <div className="space-y-3 rounded-[var(--radius-card)] border border-olive-soft bg-olive-soft p-5 text-olive-dark" role="status" data-testid="flow-resolved">
         <p className="text-lg font-semibold">{r.done}</p>
         <p className="text-sm">{r.doneBody}</p>
-        <button type="button" onClick={() => { setHistory([start.key]); setOutcome(null); }} className="min-h-11 rounded-lg border border-olive px-4 text-sm">{t.flow.restart}</button>
+        <button type="button" onClick={() => { track("flow_step", { flow_id: flow.id, step_key: start.key, action: "restart" }); setHistory([start.key]); setOutcome(null); }} className="min-h-11 rounded-lg border border-olive px-4 text-sm">{t.flow.restart}</button>
       </div>
     );
   }
@@ -48,14 +49,17 @@ export function RouterFlowRunner({ flow, t, escalation }: { flow: RouterFlow; t:
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {current.options.map((o) => (
           <button key={o.key} type="button" disabled={blocked && o.outcome !== "escalate"}
-            onClick={() => (o.outcome === "escalate" ? setOutcome("escalate") : o.outcome ? setOutcome("resolved") : o.next ? setHistory((h) => [...h, o.next!]) : null)}
+            onClick={() => {
+              track("flow_step", { flow_id: flow.id, step_key: current.key, action: o.outcome === "escalate" ? "escalate" : o.outcome ? "resolved" : "next" });
+              if (o.outcome === "escalate") setOutcome("escalate"); else if (o.outcome) setOutcome("resolved"); else if (o.next) setHistory((h) => [...h, o.next!]);
+            }}
             className="min-h-11 rounded-lg border border-line bg-white px-4 text-left text-sm font-medium hover:border-olive hover:bg-olive-soft disabled:cursor-not-allowed disabled:opacity-50" data-track="router.flow_option">
             {o.label}
           </button>
         ))}
       </div>
       {history.length > 1 ? (
-        <button type="button" onClick={() => setHistory((h) => h.slice(0, -1))} className="min-h-11 text-sm text-ink-soft underline">{t.flow.back}</button>
+        <button type="button" onClick={() => { track("flow_step", { flow_id: flow.id, step_key: current.key, action: "back" }); setHistory((h) => h.slice(0, -1)); }} className="min-h-11 text-sm text-ink-soft underline">{t.flow.back}</button>
       ) : null}
     </div>
   );

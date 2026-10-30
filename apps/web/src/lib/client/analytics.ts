@@ -19,6 +19,9 @@ interface Pending {
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
+  ch?: string;
   locale: "en" | "ms";
   props: Props;
 }
@@ -99,6 +102,9 @@ export function track(name: string, props: Props = {}) {
     utm_source: params.get("utm_source")?.slice(0, 100) ?? undefined,
     utm_medium: params.get("utm_medium")?.slice(0, 100) ?? undefined,
     utm_campaign: params.get("utm_campaign")?.slice(0, 100) ?? undefined,
+    utm_content: params.get("utm_content")?.slice(0, 100) ?? undefined,
+    utm_term: params.get("utm_term")?.slice(0, 100) ?? undefined,
+    ch: params.get("ch")?.slice(0, 40) ?? undefined,
     locale: locale(),
     props,
   });
@@ -108,4 +114,10 @@ export function track(name: string, props: Props = {}) {
 
 export function flushOnExit() {
   flush(true);
+}
+
+/** Viewport bucket for coarse interface heatmaps. */
+export function viewportBucket(): "phone" | "tablet" | "desktop" {
+  const w = window.innerWidth;
+  return w < 640 ? "phone" : w < 1024 ? "tablet" : "desktop";
 }

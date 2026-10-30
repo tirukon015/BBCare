@@ -102,6 +102,62 @@ d("database integration (real Postgres)", () => {
     expect(s!.v).toBeGreaterThanOrEqual(2);
   });
 
+  it("rollup produces source, campaign, journey, heatmap and media aggregates from events", async () => {
+    const [model] = await sql<{ id: string }[]>`SELECT id::text FROM catalog.product_models WHERE slug = 'kaon-ar2140'`;
+    const [flow] = await sql<{ id: string }[]>`SELECT id::text FROM knowledge.flows LIMIT 1`;
+    const [res] = await sql<{ id: string }[]>`SELECT id::text FROM knowledge.resources LIMIT 1`;
+    const resId = res?.id ?? "00000000-0000-0000-0000-000000000001";
+    const sid = "rollup-metrics-sessionA";
+    const t = (sec: number) => new Date(Date.now() - 60_000 + sec * 1000);
+    const ev = (name: string, props: Parameters<typeof sql.json>[0], pageType: string, at: number, extra: Record<string, unknown> = {}) =>
+      sql`INSERT INTO analytics.events ${sql({ id: crypto.randomUUID(), name, occurred_at: t(at), session_id: sid, consent: "essential", page_type: pageType, device_category: "mobile", props: sql.json(props), ...extra })}`;
+    await ev("session_started", {}, "home", 0, { utm_source: "shopee", utm_medium: "listing", utm_campaign: "ar2140-box", utm_content: "qr-box-01", link_label: "shopee", channel: "shopee", referrer_domain: "shopee.com.my" });
+    await ev("page_view", { landing: true }, "home", 1);
+    await ev("page_view", {}, "router_model", 2);
+    await ev("router_model_selected", { model_id: model!.id, ecr: "KAO" }, "router_model", 2);
+    await ev("router_mode_selected", { model_id: model!.id, mode: "mesh" }, "router_mode", 3);
+    await ev("page_view", {}, "router_scenario", 4);
+    await ev("router_scenario_selected", { model_id: model!.id, mode: "mesh", scenario: "mesh_pairing_fails", verified: false }, "router_scenario", 4);
+    await ev("support_started", { surface: "router" }, "router_scenario", 5);
+    await ev("click_area", { x_pct: 40, y_pct: 20, target: "button", viewport: "phone" }, "router_scenario", 6);
+    await ev("resource_open", { resource_id: resId, kind: "video" }, "router_scenario", 7);
+    await ev("video_progress", { resource_id: resId, pct: 50 }, "router_scenario", 8);
+    if (flow) await ev("flow_step", { flow_id: flow.id, step_key: "step1", action: "next" }, "flow", 9);
+    await ev("escalation_submitted", { origin: "router", scenario: "mesh_pairing_fails" }, "router_scenario", 10);
+    await ev("navigation_exit", { max_scroll_pct: 50 }, "router_scenario", 11);
+    // A second session that chose a problem and left without resolving or escalating.
+    const sid2 = "rollup-metrics-sessionB";
+    await sql`INSERT INTO analytics.events ${sql({ id: crypto.randomUUID(), name: "session_started", occurred_at: t(20), session_id: sid2, consent: "essential", page_type: "home", device_category: "desktop", props: sql.json({}), channel: "unknown" })}`;
+    await sql`INSERT INTO analytics.events ${sql({ id: crypto.randomUUID(), name: "page_view", occurred_at: t(21), session_id: sid2, consent: "essential", page_type: "router_scenario", device_category: "desktop", props: sql.json({}) })}`;
+    await sql`INSERT INTO analytics.events ${sql({ id: crypto.randomUUID(), name: "router_scenario_selected", occurred_at: t(22), session_id: sid2, consent: "essential", page_type: "router_scenario", device_category: "desktop", props: sql.json({ model_id: model!.id, mode: "ap", scenario: "ap_no_internet", verified: false }) })}`;
+    const day = new Date().toISOString().slice(0, 10);
+    await rollupDay(sql, day);
+    const rows = await sql<{ metric: string; dim1: string; dim2: string; value: number }[]>`SELECT metric, dim1, dim2, value::int FROM analytics.agg_daily WHERE day = ${day}::date`;
+    const has = (metric: string, dim1?: string, dim2?: string) => rows.some((r) => r.metric === metric && (dim1 === undefined || r.dim1 === dim1) && (dim2 === undefined || r.dim2 === dim2) && r.value >= 1);
+    expect(has("sources", "shopee", "shopee.com.my")).toBe(true);
+    expect(has("link_labels", "shopee")).toBe(true);
+    expect(has("campaigns", "ar2140-box", "shopee/listing")).toBe(true);
+    expect(has("campaign_content", "ar2140-box", "qr-box-01")).toBe(true);
+    expect(has("router_models", model!.id)).toBe(true);
+    expect(has("router_modes", model!.id, "mesh")).toBe(true);
+    expect(has("router_scenarios", "mesh:mesh_pairing_fails", model!.id)).toBe(true);
+    expect(has("router_scenarios_unverified", "mesh:mesh_pairing_fails", model!.id)).toBe(true);
+    expect(has("click_grid", "router_scenario|phone", "40,20")).toBe(true);
+    expect(has("resource_opens", resId, "video")).toBe(true);
+    expect(has("video_progress", resId, "50")).toBe(true);
+    expect(has("escalations", "router", "mesh_pairing_fails")).toBe(true);
+    expect(has("nav_paths", "home", "router_model")).toBe(true);
+    expect(has("journey_exit", "router_scenario", "left_after_problem")).toBe(true);
+    expect(rows.find((r) => r.metric === "journey_exit" && r.dim2 === "left_after_problem")?.value).toBe(1);
+    expect(has("channel_router", "shopee")).toBe(true);
+    expect(has("channel_support", "shopee")).toBe(true);
+    expect(has("channel_escalated", "shopee")).toBe(true);
+    expect(has("campaign_support", "ar2140-box")).toBe(true);
+    // Nothing in the aggregates carries the raw click position, a referrer path or a visitor id.
+    expect(rows.some((r) => /\//.test(r.dim2) && r.metric === "sources")).toBe(false);
+    await sql`DELETE FROM analytics.events WHERE session_id IN (${sid}, ${sid2})`;
+  });
+
   it("job claims are exclusive across concurrent workers", async () => {
     const { claim } = await import("../../../apps/worker/src/queue");
     for (let i = 0; i < 5; i++) await sql`INSERT INTO ops.jobs (queue, payload) VALUES ('test_q', '{}')`;

@@ -7,6 +7,7 @@ import { getRouterModel, verifiedScenarios } from "@/modules/router/service";
 import { recordUnresolved } from "@/modules/support/gaps";
 import { ModelHeader } from "@/components/router/model-header";
 import { Badge, Container, Notice, SectionHeading, buttonStyles, inputStyles } from "@/components/ui";
+import { TrackOnMount } from "@/components/track-on-mount";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,7 @@ export default async function RouterModePage({ params, searchParams }: { params:
   };
   return (
     <Container className="py-8">
+      <TrackOnMount name="router_mode_selected" props={{ model_id: model.id, mode }} />
       <ModelHeader model={model} locale={locale} t={t} compact />
       <h2 className="mt-6 text-2xl font-bold">{t.router.modes[mode]}</h2>
       <p className="text-ink-soft">{t.router.modes[`${mode}Body`]}</p>

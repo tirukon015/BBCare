@@ -131,3 +131,28 @@ export function describeRequirement(k: { modelName: string; scenarioTitle: strin
   const rev = normalizeHardwareRevision(k.hardwareRevision);
   return `${type} in ${k.locale === "ms" ? "Malay" : "English"}: ${k.modelName}${rev ? ` (${rev})` : ""}, ${k.scenarioTitle}`;
 }
+
+export const SOURCE_GROUPS = ["shopee", "google", "search", "social", "referral", "qr_code", "direct_link", "labelled", "website", "unknown"] as const;
+export type SourceGroup = (typeof SOURCE_GROUPS)[number];
+
+const SEARCH_HOSTS = /(^|\.)(bing\.com|yahoo\.com|duckduckgo\.com|yandex\.(com|ru)|baidu\.com|ecosia\.org|search\.brave\.com)$/i;
+const GOOGLE_HOSTS = /(^|\.)google\.[a-z.]+$/i;
+const SOCIAL_HOSTS = /(^|\.)(facebook\.com|fb\.com|m\.facebook\.com|l\.facebook\.com|instagram\.com|l\.instagram\.com|tiktok\.com|twitter\.com|x\.com|t\.co|youtube\.com|youtu\.be|whatsapp\.com|wa\.me|telegram\.org|t\.me|threads\.net|linkedin\.com|lnkd\.in|xiaohongshu\.com|pinterest\.com)$/i;
+
+/**
+ * Reporting group for a traffic source, from the classified channel and the referrer host. Only
+ * hosts the browser actually sent are grouped; "unknown" stays unknown.
+ */
+export function sourceGroup(channel: SupportChannel, referrerHost: string | null | undefined): SourceGroup {
+  if (channel === "shopee") return "shopee";
+  if (channel === "qr_code") return "qr_code";
+  if (channel === "direct_link") return "direct_link";
+  if (channel === "website") return "website";
+  if (channel === "unknown") return "unknown";
+  const host = (referrerHost ?? "").toLowerCase();
+  if (!host) return "labelled";
+  if (GOOGLE_HOSTS.test(host)) return "google";
+  if (SEARCH_HOSTS.test(host)) return "search";
+  if (SOCIAL_HOSTS.test(host)) return "social";
+  return "referral";
+}
