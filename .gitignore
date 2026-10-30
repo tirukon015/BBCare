@@ -25,3 +25,4 @@ packages/db/.seed-credentials.txt
 apps/web/e2e/.e2e-state.json
 .next-e2e/
 .devcontainer/.preview-login.txt
+infra/geoip.csv
