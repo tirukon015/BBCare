@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useReportWebVitals } from "next/web-vitals";
 import { useEffect, useRef } from "react";
 import { flushOnExit, sessionId, track } from "@/lib/client/analytics";
+import { captureTouch } from "@/lib/client/attribution";
 
 /** Page views, scroll depth on exit, tagged clicks, web vitals and JS errors. */
 export function AnalyticsTracker() {
@@ -19,6 +20,7 @@ export function AnalyticsTracker() {
   });
 
   useEffect(() => {
+    captureTouch();
     const { isNew } = sessionId();
     if (isNew) track("session_started", { entry_page_type: pathname?.split("/")[2] || "home" });
     track("page_view", first.current ? { landing: true } : {});

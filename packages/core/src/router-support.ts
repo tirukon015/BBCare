@@ -225,8 +225,9 @@ export function isCustomerVisibleFlow(f: { status: string; verificationStatus: s
 }
 
 const SECRET_PATTERNS: RegExp[] = [
-  // "password is abc123", "pwd: abc", "kata laluan abc", "katalaluan = abc"
-  /\b(pass(?:word)?|passwd|pwd|pw|kata\s?laluan|katalaluan)\b(\s*(?:is|ialah|adalah|=|:|-))?\s*\S+/gi,
+  // "password is abc123", "pwd: abc", "kata laluan abc", "password wifi saya abc123": everything after the
+  // label up to the end of the clause is removed, because the secret may sit several words later.
+  /\b(pass(?:word)?|passwd|pwd|pw|kata\s?laluan|katalaluan)\b[^.!?\n]{0,80}/gi,
   // One-time codes: "otp 123456", "TAC: 1234", "code 123456", "kod 123456"
   /\b(otp|tac|code|kod|verification code|kod pengesahan)\b(\s*(?:is|ialah|=|:|-))?\s*\d{4,8}\b/gi,
 ];

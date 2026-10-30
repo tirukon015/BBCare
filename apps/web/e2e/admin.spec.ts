@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { staffLogin } from "./helpers";
+import { acceptEssentialOnly, staffLogin } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -167,5 +167,128 @@ test.describe("router support administration", () => {
     const view = (await status.json()) as { status: string; customerNote: string };
     expect(view.status).toBe("open");
     expect(view.customerNote).toContain("light colour");
+  });
+});
+test.describe("customer demand intelligence", () => {
+  test("records demand with provenance and channel, shows it to authorised staff, fulfils it with an approved resource", async ({ browser, request, page }, info) => {
+    test.skip(info.project.name !== "desktop-chrome", "once");
+    // A customer arrives from a Shopee link, describes the problem in Malay and escalates.
+    await page.goto("/ms/routers/kaon-ar2140/mesh?ch=shopee");
+    await acceptEssentialOnly(page);
+    await page.getByLabel(/Atau terangkan masalah/).fill("ada video tak tunjuk cara pair mesh kaon");
+    await page.getByRole("button", { name: "Cari masalah saya" }).click();
+    await page.getByTestId("scenario-matches").getByTestId("scenario-mesh_pairing").click();
+    await page.getByLabel("Nama").fill("Demand Tester");
+    await page.getByRole("radio", { name: "E-mel" }).check();
+    await page.getByRole("textbox", { name: "E-mel" }).fill("demand.tester@example.com");
+    await page.getByLabel("Butiran (pilihan)").fill("boleh tunjuk video pairing? password wifi saya abc123");
+    await page.getByLabel(/Saya bersetuju/).check();
+    await page.getByTestId("escalation-submit").click();
+    const reference = (await page.getByTestId("case-reference").innerText()).trim();
+
+    // A second customer with no attribution at all, from the API, asks the same thing in English.
+    const created = await request.post("/api/public/cases", { data: {
+      locale: "en", name: "Second Tester", channel: "email", contact: "second.tester@example.com", subject: "Kaon AR2140 (KAO): Mesh pairing does not work", description: "show me a video please", consent: true,
+      router: { model: "KAO", mode: "mesh", scenario: "mesh_pairing", answers: {}, outcome: "not_verified" },
+    } });
+    expect(created.status()).toBe(201);
+
+    // Analyst: aggregates yes, original questions no.
+    const analystCtx = await browser.newContext();
+    const analyst = await analystCtx.newPage();
+    await staffLogin(analyst, "analyst@bbcare.test");
+    await analyst.goto("/admin/demand");
+    await expect(analyst.getByTestId("demand-stats")).toContainText("Missing resources");
+    const row = analyst.getByTestId("demand-row").filter({ hasText: "Video in Malay: Kaon AR2140, Mesh pairing" });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText("Shopee");
+    await expect(row.getByRole("link")).toHaveCount(0);
+    await expect(analyst.locator("main")).not.toContainText("tunjuk cara pair");
+    // Filters narrow the table.
+    await analyst.goto("/admin/demand?type=document");
+    await expect(analyst.getByTestId("demand-row")).toHaveCount(0);
+    await analyst.goto("/admin/demand?locale=ms&type=video");
+    await expect(analyst.getByTestId("demand-row").filter({ hasText: "Video in Malay: Kaon AR2140, Mesh pairing" })).toBeVisible();
+    await analystCtx.close();
+
+    // Reviewer (transcripts permission): sees the original questions, scrubbed, with case links and channels; cannot approve own upload later.
+    const editorCtx = await browser.newContext();
+    const editor = await editorCtx.newPage();
+    await staffLogin(editor, "editor@bbcare.test");
+    await editor.goto("/admin/demand");
+    await expect(editor.getByTestId("demand-row").filter({ hasText: "Video in Malay: Kaon AR2140, Mesh pairing" })).toBeVisible();
+    // The editor lacks the transcripts permission: the requirement is plain text, not a link.
+    await expect(editor.getByTestId("demand-row").filter({ hasText: "Video in Malay: Kaon AR2140, Mesh pairing" }).getByRole("link")).toHaveCount(0);
+    await editorCtx.close();
+
+    const agentCtx = await browser.newContext();
+    const agent = await agentCtx.newPage();
+    await staffLogin(agent, "agent@bbcare.test");
+    await agent.goto("/admin/demand");
+    await expect(agent.getByRole("heading", { name: /Customer Demand Intelligence/ })).toHaveCount(0);
+    await agentCtx.close();
+
+    const adminCtx = await browser.newContext();
+    const admin = await adminCtx.newPage();
+    await staffLogin(admin, "admin@bbcare.test");
+    await admin.goto("/admin/demand?locale=ms&type=video");
+    await admin.getByTestId("demand-row").filter({ hasText: "Video in Malay: Kaon AR2140, Mesh pairing" }).getByRole("link").click();
+    await expect(admin.getByTestId("demand-summary")).toContainText("Kaon AR2140 (KAO)");
+    await expect(admin.getByTestId("demand-summary")).toContainText("Shopee 1");
+    const requests = admin.getByTestId("demand-requests");
+    await expect(requests).toContainText("ada video tak tunjuk cara pair mesh kaon");
+    await expect(requests).not.toContainText("abc123");
+    await expect(requests).toContainText("[removed]");
+    await expect(requests.getByRole("link", { name: reference })).toBeVisible();
+    await expect(requests).toContainText("Typed description");
+    await expect(requests).toContainText("Support request");
+    // The English request is a separate requirement.
+    await admin.goto("/admin/demand?locale=en&type=video");
+    await expect(admin.getByTestId("demand-row").filter({ hasText: "Video in English: Kaon AR2140, Mesh pairing" })).toContainText("Unknown");
+
+    // Upload a video for the Malay requirement (admin), then approve as reviewer (different person).
+    await admin.goto("/admin/demand?locale=ms&type=video");
+    await admin.getByTestId("demand-row").filter({ hasText: "Video in Malay: Kaon AR2140, Mesh pairing" }).getByRole("link").click();
+    await admin.waitForURL(/\/admin\/demand\/[0-9a-f-]{36}/);
+    const detailUrl = admin.url().split("?")[0]!;
+    const mp4 = Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from("ftypmp42"), Buffer.alloc(16)]);
+    await admin.getByTestId("resource-upload").locator("input[type=file]").setInputFiles({ name: "pairing.mp4", mimeType: "video/mp4", buffer: mp4 });
+    await admin.getByLabel("Title (English)").fill("Pairing a second AR2140 (test fixture)");
+    await admin.getByLabel("Title (Malay)").fill("Memasangkan AR2140 kedua (fixture ujian)");
+    await admin.getByRole("button", { name: "Upload for review" }).click();
+    await expect(admin.getByTestId("demand-summary")).toContainText("under review");
+    await expect(admin.getByTestId("demand-resources").getByRole("button", { name: "Approve" })).toBeDisabled();
+    await adminCtx.close();
+
+    const reviewerCtx = await browser.newContext();
+    const reviewer = await reviewerCtx.newPage();
+    await staffLogin(reviewer, "reviewer@bbcare.test");
+    // The reviewer has no transcripts permission, so the detail page (customer questions) is refused;
+    // approval happens in the resource library.
+    await reviewer.goto(detailUrl);
+    await expect(reviewer.getByTestId("demand-requests")).toHaveCount(0);
+    await reviewer.goto("/admin/resources?status=under_review");
+    const libRow = reviewer.getByRole("row").filter({ hasText: "Pairing a second AR2140 (test fixture)" });
+    await libRow.getByRole("button", { name: "Approve" }).click();
+    await expect(reviewer.getByRole("status")).toContainText("Saved");
+    await reviewer.goto("/admin/resources?status=approved");
+    await expect(reviewer.getByRole("row").filter({ hasText: "Pairing a second AR2140 (test fixture)" })).toBeVisible();
+    await reviewerCtx.close();
+
+    // History is preserved after fulfilment and the demand is now approved.
+    const adminCtx2 = await browser.newContext();
+    const admin2 = await adminCtx2.newPage();
+    await staffLogin(admin2, "admin@bbcare.test");
+    await admin2.goto(detailUrl);
+    await expect(admin2.getByTestId("demand-summary")).toContainText("approved");
+    await expect(admin2.getByTestId("demand-requests")).toContainText("ada video tak tunjuk cara pair mesh kaon");
+    await adminCtx2.close();
+
+    // The customer now sees the approved video on the scenario page, and a new identical request is not recorded as missing.
+    await page.goto("/ms/routers/kaon-ar2140/mesh/mesh_pairing");
+    await expect(page.getByTestId("resource-video")).toContainText("Memasangkan AR2140 kedua");
+    const media = await request.get(page.url().replace(/\/ms\/.*$/, "") + (await page.getByTestId("resource-video").locator("source").getAttribute("src")));
+    expect(media.status()).toBe(200);
+    expect(media.headers()["content-type"]).toBe("video/mp4");
   });
 });

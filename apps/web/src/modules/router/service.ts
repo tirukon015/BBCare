@@ -1,6 +1,6 @@
 import "server-only";
 import { ROUTER_ECR_CODES, type SupportMode } from "@bbcare/core";
-import { loadVerifiedRouterFlow, verifiedScenarioKeys } from "@bbcare/db";
+import { approvedResources, loadVerifiedRouterFlow, verifiedScenarioKeys, type ApprovedResource } from "@bbcare/db";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import type { Locale } from "@/i18n";
@@ -85,4 +85,18 @@ export async function getModelImage(slug: string): Promise<{ storageKey: string;
     SELECT a.storage_key, a.mime_type FROM catalog.product_models m JOIN knowledge.media_assets a ON a.id = m.image_asset_id
     WHERE m.slug = ${slug} AND m.ecr_code IS NOT NULL AND m.image_verified_at IS NOT NULL AND m.image_verified_by IS NOT NULL`;
   return r ? { storageKey: r.storage_key, mimeType: r.mime_type } : null;
+}
+
+/** Approved library resources (videos, diagrams, images, documents) for a model, mode and scenario. */
+export async function resourcesForScenario(modelId: string, mode: SupportMode, scenarioKey: string, locale: Locale): Promise<ApprovedResource[]> {
+  return approvedResources(db(), { modelId, supportMode: mode, scenarioKey, locale });
+}
+
+/** File behind an approved resource, or null. Unapproved uploads are never served to the public. */
+export async function getResourceFile(id: string): Promise<{ storageKey: string; mimeType: string; kind: string; name: string } | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const [r] = await db()<{ storage_key: string; mime_type: string; kind: string; original_name: string }[]>`
+    SELECT a.storage_key, a.mime_type, r.kind, a.original_name FROM knowledge.resources r JOIN knowledge.media_assets a ON a.id = r.media_asset_id
+    WHERE r.id = ${id} AND r.status = 'approved'`;
+  return r ? { storageKey: r.storage_key, mimeType: r.mime_type, kind: r.kind, name: r.original_name } : null;
 }

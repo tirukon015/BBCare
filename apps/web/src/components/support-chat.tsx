@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Dictionary } from "@/i18n";
+import { attributionPayload } from "@/lib/client/attribution";
 import type { AssistantPayload } from "@/modules/support/service";
 import { track } from "@/lib/client/analytics";
 import { EscalationForm } from "./escalation-form";
@@ -46,7 +47,7 @@ export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEsc
     const res = await fetch("/api/public/support/sessions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ locale, model: model?.slug ?? null }),
+      body: JSON.stringify({ locale, model: model?.slug ?? null, attribution: attributionPayload() }),
     });
     if (!res.ok) throw new Error(res.status === 429 ? "rate" : "error");
     const { sessionId: id } = (await res.json()) as { sessionId: string };

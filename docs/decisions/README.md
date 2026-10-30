@@ -12,5 +12,6 @@ Each significant decision has a numbered record. Status values: Proposed, Accept
 | [0006](0006-first-party-analytics.md) | First-party analytics, third-party tools off by default | Accepted |
 | [0007](0007-git-workflow.md) | Git workflow and checkpoints | Accepted |
 | [0008](0008-router-first-verified-guidance.md) | Router-first catalogue and verified-only model guidance | Accepted |
+| [0009](0009-customer-demand-intelligence.md) | Customer demand intelligence and resource library | Accepted |
 
 Template for new records: Context, Options, Decision, Consequences (cost, privacy, operations), Follow-up.

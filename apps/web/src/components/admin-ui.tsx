@@ -12,6 +12,8 @@ const NAV: { href: string; label: string; permission?: Permission }[] = [
   { href: "/admin/flows", label: "Troubleshooting flows", permission: "knowledge.read" },
   { href: "/admin/review", label: "Review queue", permission: "knowledge.review" },
   { href: "/admin/gaps", label: "Knowledge gaps", permission: "knowledge.read" },
+  { href: "/admin/demand", label: "Customer Demand Intelligence", permission: "analytics.read" },
+  { href: "/admin/resources", label: "Resource library", permission: "knowledge.read" },
   { href: "/admin/imports", label: "Historical imports", permission: "imports.manage" },
   { href: "/admin/catalog", label: "Catalog", permission: "catalog.read" },
   { href: "/admin/products", label: "Products & listings", permission: "commerce.read" },

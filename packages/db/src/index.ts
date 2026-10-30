@@ -6,3 +6,4 @@ export * from "./repos/search";
 export * from "./repos/analytics";
 export * from "./repos/imports";
 export * from "./repos/router";
+export * from "./repos/demand";

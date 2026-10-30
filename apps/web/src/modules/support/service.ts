@@ -11,6 +11,8 @@ import { aiProvider, aiState } from "@/lib/ai";
 import { logger } from "@/lib/logger";
 import { getRecommendations, type RecommendationCard } from "@/modules/commerce/service";
 import { recordUnresolved } from "./gaps";
+import { detectAndRecordDemand } from "./demand";
+import { storeAttribution } from "./attribution";
 
 export const SUPPORT_COOKIE = "bbcare_support";
 const SESSION_DAYS = 7;
@@ -28,10 +30,10 @@ export async function createSession(opts: { locale: "en" | "ms"; categorySlug?: 
     ? await sql<{ id: string; category_id: string }[]>`SELECT id, category_id FROM catalog.product_models WHERE slug = ${opts.modelSlug} AND status <> 'hidden'`
     : [];
   const [cat] = !model && opts.categorySlug ? await sql<{ id: string }[]>`SELECT id FROM catalog.categories WHERE slug = ${opts.categorySlug}` : [];
-  await sql`
+  const [row] = await sql<{ id: string }[]>`
     INSERT INTO support.sessions (public_id, token_hash, locale, category_id, model_id, expires_at)
-    VALUES (${publicId}, ${hash}, ${opts.locale}, ${model?.category_id ?? cat?.id ?? null}, ${model?.id ?? null}, now() + ${`${SESSION_DAYS} days`}::interval)`;
-  return { publicId, token, maxAgeSeconds: SESSION_DAYS * 86400 };
+    VALUES (${publicId}, ${hash}, ${opts.locale}, ${model?.category_id ?? cat?.id ?? null}, ${model?.id ?? null}, now() + ${`${SESSION_DAYS} days`}::interval) RETURNING id`;
+  return { id: row!.id, publicId, token, maxAgeSeconds: SESSION_DAYS * 86400 };
 }
 
 /** Load a session only if the caller holds its token (cookie value "publicId.token"). */
@@ -109,6 +111,12 @@ export async function handleCustomerMessage(session: SessionRow, rawText: string
     : [];
   const resolvedModel = model ? { slug: model.slug, name: model.display_name } : null;
   const routerSuggestion = model?.ecr_code ? suggestRouterScenario(model.slug, text) : null;
+  if (routerSuggestion && modelId) {
+    await detectAndRecordDemand({
+      modelId, supportMode: routerSuggestion.mode, scenarioKey: routerSuggestion.scenario, locale: language, question: text, origin: "assistant",
+      sessionId: session.id, customerRef: session.public_id, alsoCheck: ["text_guide"],
+    });
+  }
 
   // Ambiguous model and no model known yet: ask before giving model-specific instructions.
   if (!modelId && !opts.modelSlug && classifyResolution(candidates) === "ambiguous") {
@@ -249,7 +257,7 @@ export interface EscalationInput {
  * anything that looks like a password or one-time code removed. Returns a one-time follow-up
  * code that the customer needs, with the reference, to check progress.
  */
-export async function escalate(session: SessionRow | null, input: EscalationInput) {
+export async function escalate(session: SessionRow | null, input: EscalationInput, opts: { attribution?: unknown; req?: Request } = {}) {
   const key = env().BBCARE_ENCRYPTION_KEY;
   const sql = db();
   const isEmail = input.channel === "email";
@@ -285,8 +293,19 @@ export async function escalate(session: SessionRow | null, input: EscalationInpu
     RETURNING id, reference`;
   await sql`INSERT INTO support.case_events (case_id, kind, data) VALUES (${c!.id}, 'created', ${sql.json({ via: session ? "chat" : mode ? "router" : "form", outcome: input.router?.outcome ?? null })})`;
   if (session) await sql`UPDATE support.sessions SET status = 'escalated' WHERE id = ${session.id}`;
+  // Attribution: a chat session already carries its own; a case created from a page form gets its own row.
+  if (!session && opts.req) await storeAttribution(opts.req, { caseId: c!.id }, opts.attribution);
   if (session || mode) {
     await recordUnresolved({ query: scenario ? `${scenario} ${subject}` : subject, locale: input.locale, source: "escalation", categoryId, modelId });
+  }
+  // Missing-resource detection: an escalation for a known model, mode and problem is demand for a
+  // text guide (and for whatever the customer's own words ask for).
+  if (modelId && mode && scenario) {
+    await detectAndRecordDemand({
+      modelId, supportMode: mode, scenarioKey: scenario, locale: input.locale,
+      question: [input.subject, input.description ?? ""].filter(Boolean).join(" "), origin: "escalation",
+      sessionId: session?.id ?? null, caseId: c!.id, customerRef: session?.public_id ?? c!.id, alsoCheck: ["text_guide"],
+    });
   }
   return { ...c!, followUpCode: followUp.token, redacted: !!cleanDesc?.redacted };
 }

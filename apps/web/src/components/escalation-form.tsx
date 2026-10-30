@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import type { Dictionary } from "@/i18n";
+import { attributionPayload } from "@/lib/client/attribution";
 import { inputStyles } from "./ui";
 
 interface Props {
@@ -39,6 +40,7 @@ export function EscalationForm({ locale, t, sessionId, contacts, onClose, defaul
           subject: String(form.get("subject") ?? ""),
           description: String(form.get("description") ?? "") || undefined,
           consent: form.get("consent") === "on",
+          attribution: attributionPayload(),
         }),
       });
       if (res.status === 429) throw new Error(t.support.rateLimited);

@@ -49,6 +49,9 @@ pnpm --filter @bbcare/web test:e2e                                           # P
 ```
 GitHub Actions runs all of these on every push (`.github/workflows/ci.yml`).
 
+## Customer demand intelligence
+Staff see what customers asked for that BBCare could not give them (Admin, Customer Demand Intelligence): missing guides, videos, diagrams, images and documents per router model and problem, with every original question, the linked case and the source channel. Label BBTech's own links so channels are attributed: `?ch=shopee` on Shopee listings, `?ch=qr` on printed QR codes, or standard UTM parameters. Unlabelled arrivals show as "Unknown". Staff upload resources in the demand detail; a different reviewer approves them in Admin, Resource library before customers or the AI see them. See ADR 0009.
+
 ## Router catalogue and research
 ```bash
 pnpm --filter @bbcare/db router-catalog     # create or update the seven router models (idempotent, never deletes)

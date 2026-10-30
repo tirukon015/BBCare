@@ -35,6 +35,8 @@ export const EVENT_PROPS = {
   support_resolved: z.strictObject({ support_session: id, turns: z.number().int().min(0).max(500).optional() }),
   support_escalated: z.strictObject({ support_session: id, reason: shortText.optional() }),
   article_feedback: z.strictObject({ article_id: uuid, rating: z.union([z.literal(-1), z.literal(1)]) }),
+  resource_open: z.strictObject({ resource_id: uuid, kind: z.enum(["video", "diagram", "image", "document"]) }),
+  resource_feedback: z.strictObject({ resource_id: uuid, rating: z.union([z.literal(-1), z.literal(1)]) }),
   recommendation_shown: z.strictObject({
     recommendation_id: uuid,
     product_id: uuid,

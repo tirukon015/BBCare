@@ -37,7 +37,7 @@ export default async function RouterModePage({ params, searchParams }: { params:
     const s = scenarios.find((x) => x.key === key)!;
     return (
       <li key={key}>
-        <Link href={`${base}/${key}`} className={`flex h-full flex-col gap-1 rounded-[var(--radius-card)] border bg-white p-4 hover:border-olive ${highlight ? "border-olive" : "border-line"}`} data-track="router.pick_scenario" data-testid={`scenario-${key}`}>
+        <Link href={`${base}/${key}${highlight && q ? `?q=${encodeURIComponent(q)}` : ""}`} className={`flex h-full flex-col gap-1 rounded-[var(--radius-card)] border bg-white p-4 hover:border-olive ${highlight ? "border-olive" : "border-line"}`} data-track="router.pick_scenario" data-testid={`scenario-${key}`}>
           <span className="flex flex-wrap items-center justify-between gap-2">
             <span className="font-semibold">{locale === "ms" ? s.ms : s.en}</span>
             {verified.has(key) ? <Badge tone="olive">{t.router.verifiedBadge}</Badge> : <Badge>{t.router.staffBadge}</Badge>}

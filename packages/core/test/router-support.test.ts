@@ -92,7 +92,8 @@ describe("intake and secrets", () => {
     expect(describeIntake({ unit_role: "second" })).toEqual([{ question: "Which unit has the problem?", answer: "The second unit" }]);
   });
   it("redacts passwords and one-time codes", () => {
-    expect(redactSecrets("my wifi password is Hunter22 please help").text).toBe("my wifi password [removed] please help");
+    expect(redactSecrets("my wifi password is Hunter22 please help").text).toBe("my wifi password [removed]");
+    expect(redactSecrets("password wifi saya abc123. mesh tak boleh pair").text).toBe("password [removed]. mesh tak boleh pair");
     expect(redactSecrets("kata laluan: abc123").text).toBe("kata laluan [removed]");
     expect(redactSecrets("OTP 482913 received").text).toBe("OTP [removed] received");
     expect(redactSecrets("mesh light is red").redacted).toBe(false);

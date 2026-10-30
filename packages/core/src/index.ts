@@ -13,3 +13,4 @@ export * from "./analytics";
 export * from "./files";
 export * from "./chatgpt-import";
 export * from "./router-support";
+export * from "./demand";

@@ -58,3 +58,15 @@ export function sniffImageType(bytes: Uint8Array): ImageType | null {
   if (at([0x52, 0x49, 0x46, 0x46]) && at([0x57, 0x45, 0x42, 0x50], 8)) return "webp";
   return null;
 }
+
+export type VideoType = "mp4" | "webm";
+export const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
+
+/** Videos accepted for the resource library, decided by magic bytes: MP4 (ftyp box) or WebM (EBML header). */
+export function sniffVideoType(bytes: Uint8Array): VideoType | null {
+  const at = (sig: number[], offset = 0) => sig.every((b, i) => bytes[offset + i] === b);
+  if (at([0x66, 0x74, 0x79, 0x70], 4)) return "mp4";
+  if (at([0x1a, 0x45, 0xdf, 0xa3])) return "webm";
+  return null;
+}

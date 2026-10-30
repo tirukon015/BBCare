@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { fulfilDemandsForFlow } from "@bbcare/db";
 import { db } from "@/lib/db";
 import { audit } from "@/modules/audit/service";
 import type { StaffUser } from "@/modules/identity/service";
@@ -142,6 +143,8 @@ export async function setFlowStatus(user: StaffUser, id: string, status: "draft"
     throw err;
   }
   await audit({ actorId: user.id, action: "knowledge.flow_status", entityType: "flow", entityId: id, summary: { status } });
+  // A newly live guide satisfies every open text-guide demand for its model, mode and problem.
+  if (status === "published") await fulfilDemandsForFlow(db(), id);
   return { ok: true };
 }
 

@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { INTAKE_QUESTIONS, scenarioByKey, type SupportMode } from "@bbcare/core";
 import { getDictionary, localeOrDefault } from "@/i18n";
 import { env } from "@/lib/env";
-import { getRouterModel, getVerifiedRouterFlow } from "@/modules/router/service";
+import { getRouterModel, getVerifiedRouterFlow, resourcesForScenario } from "@/modules/router/service";
+import { detectAndRecordDemand } from "@/modules/support/demand";
+import { ResourceList } from "@/components/router/resource-list";
 import { ModelHeader } from "@/components/router/model-header";
 import { RouterEscalation, type IntakeView } from "@/components/router/router-escalation";
 import { RouterFlowRunner } from "@/components/router/router-flow";
@@ -21,15 +23,19 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: s && m ? `${m.name}: ${localeOrDefault(locale) === "ms" ? s.ms : s.en}` : "Router", robots: { index: false } };
 }
 
-export default async function RouterScenarioPage({ params }: { params: Promise<{ locale: string; model: string; mode: string; scenario: string }> }) {
+export default async function RouterScenarioPage({ params, searchParams }: { params: Promise<{ locale: string; model: string; mode: string; scenario: string }>; searchParams: Promise<{ q?: string }> }) {
   const { locale: raw, model: slug, mode: rawMode, scenario: key } = await params;
+  const typed = typeof (await searchParams).q === "string" ? (await searchParams).q!.trim().slice(0, 300) : "";
   const locale = localeOrDefault(raw);
   const t = getDictionary(locale);
   const mode = asMode(rawMode);
   const scenario = scenarioByKey(key);
   const model = await getRouterModel(slug);
   if (!model || !mode || !scenario || !scenario.modes.includes(mode)) notFound();
-  const flow = await getVerifiedRouterFlow(model.id, mode, scenario.key, locale);
+  const [flow, resources] = await Promise.all([getVerifiedRouterFlow(model.id, mode, scenario.key, locale), resourcesForScenario(model.id, mode, scenario.key, locale)]);
+  // The customer typed a description and then chose this problem: a request in their own words.
+  // There is no session or case yet, so it is counted under a one-off anonymous reference.
+  if (typed) await detectAndRecordDemand({ modelId: model.id, supportMode: mode, scenarioKey: scenario.key, locale, question: typed, origin: "describe_box", customerRef: "anon" });
   const ms = locale === "ms";
   const questions: IntakeView[] = scenario.intake.map((q) => {
     const def = INTAKE_QUESTIONS[q]!;
@@ -59,6 +65,7 @@ export default async function RouterScenarioPage({ params }: { params: Promise<{
           ) : null}
           <div className="mb-4"><Notice tone="warn" role="note">{t.router.noSecrets}</Notice></div>
           <RouterFlowRunner flow={flow} t={t} escalation={escalation("steps_failed")} />
+          <ResourceList items={resources} t={t} />
           <section className="mt-8" aria-labelledby="sources">
             <SectionHeading id="sources">{t.router.sources}</SectionHeading>
             <ul className="space-y-1 text-sm" data-testid="flow-sources">
@@ -76,6 +83,7 @@ export default async function RouterScenarioPage({ params }: { params: Promise<{
           <div className="mb-5" data-testid="not-verified">
             <Notice role="status"><strong className="block">{t.router.notVerifiedTitle}</strong>{t.router.notVerifiedBody}</Notice>
           </div>
+          {resources.length ? <div className="mb-6"><ResourceList items={resources} t={t} /></div> : null}
           {escalation("not_verified")}
         </>
       )}

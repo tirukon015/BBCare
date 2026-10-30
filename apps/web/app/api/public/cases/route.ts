@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { authorizeSession, escalate } from "@/modules/support/service";
 import { readSupportCookie } from "@/modules/support/cookies";
+import { storeAttribution } from "@/modules/support/attribution";
 import { rateLimit } from "@/lib/rate-limit";
 import { clientIpFrom, isSameOrigin, jsonError, readJson } from "@/lib/request";
 
@@ -24,6 +25,7 @@ const schema = z
       flowId: z.string().max(40).nullish(),
       outcome: z.enum(["not_verified", "steps_failed"]).optional(),
     }).nullish(),
+    attribution: z.unknown().optional(),
   })
   .refine((v) => (v.channel === "email" ? z.email().safeParse(v.contact).success : /^\+?[\d\s-]{8,20}$/.test(v.contact)), { path: ["contact"], message: "invalid_contact" });
 
@@ -33,6 +35,6 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await readJson(req, 16_000).catch(() => null));
   if (!parsed.success) return Response.json({ error: "invalid", fields: parsed.error.issues.map((i) => i.path.join(".")) }, { status: 400 });
   const session = parsed.data.sessionId ? await authorizeSession(parsed.data.sessionId, await readSupportCookie()) : null;
-  const c = await escalate(session, parsed.data);
+  const c = await escalate(session, parsed.data, { attribution: parsed.data.attribution, req });
   return Response.json({ reference: c.reference, followUpCode: c.followUpCode, redacted: c.redacted }, { status: 201 });
 }

@@ -64,7 +64,7 @@ export async function rollupDay(sql: Sql, day: string): Promise<number> {
 }
 
 /** Retention: raw analytics 90 days, security events 30 days, support sessions 180 days, closed-case contacts 90 days. */
-export async function applyRetention(sql: Sql, opts = { eventsDays: 90, securityDays: 30, sessionDays: 180, contactDays: 90, retrievalDays: 90 }) {
+export async function applyRetention(sql: Sql, opts = { eventsDays: 90, securityDays: 30, sessionDays: 180, contactDays: 90, retrievalDays: 90, demandQuestionDays: 180 }) {
   const out: Record<string, number> = {};
   out.events = (await sql`DELETE FROM analytics.events WHERE received_at < now() - make_interval(days => ${opts.eventsDays})`).count;
   out.security = (await sql`DELETE FROM analytics.security_events WHERE at < now() - make_interval(days => ${opts.securityDays})`).count;
@@ -75,6 +75,10 @@ export async function applyRetention(sql: Sql, opts = { eventsDays: 90, security
   out.sessions = (await sql`
     DELETE FROM support.sessions s WHERE s.created_at < now() - make_interval(days => ${opts.sessionDays})
       AND NOT EXISTS (SELECT 1 FROM support.cases c WHERE c.session_id = s.id AND c.status NOT IN ('closed'))`).count;
+  // Demand counts are kept for trend analysis; the customer's own words are removed after the support retention period.
+  out.demandQuestions = (await sql`
+    UPDATE support.resource_demand_requests SET question = '[removed after retention period]'
+    WHERE created_at < now() - make_interval(days => ${opts.demandQuestionDays}) AND question <> '[removed after retention period]'`).count;
   out.staffSessions = (await sql`DELETE FROM identity.sessions WHERE expires_at < now()`).count;
   out.rateLimits = (await sql`DELETE FROM ops.rate_limits WHERE updated_at < now() - interval '1 day'`).count;
   await sql`SELECT analytics.ensure_partitions(2)`;
