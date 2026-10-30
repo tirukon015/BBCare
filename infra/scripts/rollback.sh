@@ -11,7 +11,9 @@ PREV=$(cat "$STATE_DIR/previous_image" 2>/dev/null || true)
 [ -n "$PREV" ] || { echo "[rollback] no previous image recorded"; exit 1; }
 CUR=$(cat "$STATE_DIR/current_image" 2>/dev/null || true)
 echo "[rollback] $CUR -> $PREV"
-BBCARE_IMAGE="$PREV" docker compose --env-file "$ENV_FILE" -f "$HERE/../compose/docker-compose.yml" up -d --remove-orphans
+DC=(docker compose --env-file "$ENV_FILE" -f "$HERE/../compose/docker-compose.yml")
+for f in ${BBCARE_COMPOSE_OVERRIDES:-}; do DC+=(-f "$HERE/../../$f"); done
+BBCARE_IMAGE="$PREV" "${DC[@]}" up -d --remove-orphans
 for _ in $(seq 1 30); do curl -fsS -m 5 "http://127.0.0.1:${BBCARE_WEB_PORT}/api/health/ready" >/dev/null 2>&1 && break; sleep 4; done
 echo "$PREV" > "$STATE_DIR/current_image"; echo "$CUR" > "$STATE_DIR/previous_image"
 echo "[rollback] done"

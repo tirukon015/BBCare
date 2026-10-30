@@ -127,3 +127,8 @@ Verified in a real browser (production build) against a database created by the 
 - Events added: `assistant_opened` (launcher, inline, page), `ai_unavailable`, `flow_step_viewed`. Attribution: `utm_source=qr` now classifies as QR.
 - Health: `/api/health/ready` reports `geo`. Settings page shows location and city rows with real status.
 - Docs: `docs/analytics/geographic-analytics.md`, `docs/deployment/geo-analytics-server-request.md`, campaign-links update. Tests: unit (lookup, region codes), database (geo rollup), e2e `geo.spec.ts` (pipeline, consent, unknown, duplicates, map, drill-down, RBAC, audit).
+
+## Final audit and server handoff (2026-10-30)
+- Audit: branch `claude/festive-einstein-3g612s` at `ee7a696` matched the remote with a clean tree; `bf2d140` and `ee7a696` in history; CI runs 20 and 21 green; every API the frontend calls exists; English and Malay dictionaries have identical keys; no placeholder values on production pages.
+- Fixes: retention periods shown in admin now come from `RETENTION_DEFAULTS` (one source with the worker); `.env.example` Flask defaults match the gateway (`127.0.0.1:5001`, `qwen2.5:7b`) with the Docker network note; compose gains `host.docker.internal` and an optional geolocation mount override; deploy and rollback scripts accept `BBCARE_COMPOSE_OVERRIDES`; accessibility check on the Geographic Analytics page.
+- Handoff: `docs/server-handoff/` with README, inventory requirements, geolocation setup, database migration, AI integration, deployment runbook, acceptance tests, environment variables, rollback and recovery, production privacy checklist. GitHub issue created for Antigravity (link in the issue tracker).

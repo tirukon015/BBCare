@@ -1,0 +1,8 @@
+# Optional override: mount the offline geolocation file into the web container.
+#   docker compose --env-file /etc/bbcare/<env>.env -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.geoip.yml up -d
+# or set BBCARE_COMPOSE_OVERRIDES="infra/compose/docker-compose.geoip.yml" in the env file so deploy.sh and rollback.sh add it.
+# Requires in the env file: BBCARE_GEOIP_HOST_PATH=/etc/bbcare/geoip.csv and BBCARE_GEOIP_CSV=/app/geoip.csv
+services:
+  web:
+    volumes:
+      - ${BBCARE_GEOIP_HOST_PATH:?set BBCARE_GEOIP_HOST_PATH}:/app/geoip.csv:ro

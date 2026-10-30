@@ -173,7 +173,10 @@ export async function rollupDay(sql: Sql, day: string): Promise<number> {
 }
 
 /** Retention: raw analytics 90 days, security events 30 days, support sessions 180 days, closed-case contacts 90 days. */
-export async function applyRetention(sql: Sql, opts = { eventsDays: 90, securityDays: 30, sessionDays: 180, contactDays: 90, retrievalDays: 90, demandQuestionDays: 180 }) {
+/** Retention periods in days, applied nightly by the worker and shown to staff and in the privacy notice. */
+export const RETENTION_DEFAULTS = { eventsDays: 90, securityDays: 30, sessionDays: 180, contactDays: 90, retrievalDays: 90, demandQuestionDays: 180 } as const;
+
+export async function applyRetention(sql: Sql, opts: { eventsDays: number; securityDays: number; sessionDays: number; contactDays: number; retrievalDays: number; demandQuestionDays: number } = RETENTION_DEFAULTS) {
   const out: Record<string, number> = {};
   out.events = (await sql`DELETE FROM analytics.events WHERE received_at < now() - make_interval(days => ${opts.eventsDays})`).count;
   out.security = (await sql`DELETE FROM analytics.security_events WHERE at < now() - make_interval(days => ${opts.securityDays})`).count;

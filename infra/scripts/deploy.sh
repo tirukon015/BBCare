@@ -25,6 +25,8 @@ fi
 
 PREV=$(cat "$STATE_DIR/current_image" 2>/dev/null || true)
 DC=(docker compose --env-file "$ENV_FILE" -f "$HERE/../compose/docker-compose.yml")
+# Optional extra compose files (space separated, relative to the repository root), for example the geolocation mount.
+for f in ${BBCARE_COMPOSE_OVERRIDES:-}; do DC+=(-f "$HERE/../../$f"); done
 
 if [ -n "$PREV" ]; then
   echo "[deploy] pre-deploy backup"

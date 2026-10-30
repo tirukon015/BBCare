@@ -1,5 +1,7 @@
 # Server implementation request: geographic analytics
 
+Superseded by the complete package in `docs/server-handoff/` (2026-10-30). Kept for history.
+
 For: the server-side agent (Antigravity) or the owner. Scope: the BBCare Ubuntu host only. Nothing here touches Ollama, the Flask gateway, Cloudflare Tunnel, Nginx configuration or firewall rules. Review before applying. Do not run production migrations or restart services without the owner's explicit approval.
 
 ## What ships in the repository (already pushed)

@@ -65,3 +65,6 @@ Container image plus Docker Compose behind Nginx or a Cloudflare Tunnel. See `do
 
 ## AI
 AI answers are **off by default**. The site is fully usable in search-first mode. Integration with the owner's existing Flask AI service is described in `docs/integration/flask-ai-service.md`. No paid hosted AI is used.
+
+## Server handoff
+See `docs/server-handoff/`.

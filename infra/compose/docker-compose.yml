@@ -44,6 +44,8 @@ services:
       - storage:/app/storage
     ports:
       - "127.0.0.1:${BBCARE_WEB_PORT:?set BBCARE_WEB_PORT}:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       migrate: { condition: service_completed_successfully }
     networks: [internal, egress]
@@ -62,6 +64,8 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
     networks: [internal, egress]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       disable: true
     deploy:

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { staffLogin } from "./helpers";
+import AxeBuilder from "@axe-core/playwright";
+import { expectNoHorizontalScroll, staffLogin } from "./helpers";
 
 /**
  * The geographic pipeline end to end: synthetic events arrive from RFC 5737 test addresses, the
@@ -73,6 +74,10 @@ test.describe("geographic analytics pipeline", () => {
     await page.getByTestId("geo-back").click();
     await expect(page.getByTestId("geo-detail")).toHaveCount(0);
     await expect(page.getByTestId("geo-row-MY-10")).toContainText("Selangor");
+    // Accessibility of the map page: no serious or critical WCAG violations, no horizontal scroll.
+    const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+    expect(axe.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+    await expectNoHorizontalScroll(page);
     // Raw addresses never reach the page.
     await expect(page.locator("main")).not.toContainText("198.51.100");
   });

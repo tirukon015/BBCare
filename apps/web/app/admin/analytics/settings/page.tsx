@@ -4,6 +4,7 @@ import { parsePeriod, trackingStatus } from "@/modules/analytics/intelligence";
 import { AdminShell, Table, Td } from "@/components/admin-ui";
 import { AnalyticsNav, Panel } from "@/components/analytics-nav";
 import { Notice } from "@/components/ui";
+import { RETENTION_DEFAULTS as R } from "@bbcare/db";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Privacy & Tracking Settings" };
@@ -69,11 +70,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Panel title="Retention (applied by the worker retention job)">
           <ul className="list-disc space-y-1 pl-5 text-sm">
-            <li>Raw analytics events: 90 days, then deleted; aggregates kept.</li>
-            <li>Security events: 30 days.</li>
-            <li>Support sessions and transcripts: 180 days.</li>
-            <li>Case contact details: 90 days after closure.</li>
-            <li>Customer question text in demand requests: 180 days, then replaced with a placeholder; counts kept.</li>
+            <li>Raw analytics events: {R.eventsDays} days, then deleted; aggregates kept.</li>
+            <li>Security events: {R.securityDays} days.</li>
+            <li>Support sessions and transcripts: {R.sessionDays} days.</li>
+            <li>Case contact details: {R.contactDays} days after closure.</li>
+            <li>Retrieval traces: {R.retrievalDays} days.</li>
+            <li>Customer question text in demand requests: {R.demandQuestionDays} days, then replaced with a marker; counts kept.</li>
             <li>Consented visitor id: 180 days in the browser.</li>
           </ul>
           <p className="mt-2 text-xs text-muted">Last completed job: {s.lastJob ? `${s.lastJob.queue} at ${s.lastJob.finished_at?.toISOString().slice(0, 16).replace("T", " ")}` : "none recorded in this database; dashboards refresh today's aggregates on open."}</p>
