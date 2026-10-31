@@ -12,7 +12,7 @@ test.describe("customer website UI", () => {
     await expect(page.getByTestId("entry-router")).toBeVisible();
     await expect(page.getByTestId("popular-issues").getByRole("link")).toHaveCount(9);
     await expect(page.getByTestId("router-model")).toHaveCount(7);
-    await expect(page.locator("header img[alt='BBCare']").first()).toBeVisible();
+    await expect(page.getByRole("banner").getByRole("link", { name: /BBCare/ }).first()).toBeVisible();
     // Popular search term leads to the results page with the filters.
     await page.getByRole("link", { name: "Router setup", exact: true }).click();
     await expect(page).toHaveURL(/\/en\/search\?q=Router(%20|\+)setup/);
@@ -28,7 +28,7 @@ test.describe("customer website UI", () => {
       const nav = page.getByRole("navigation", { name: "Main" });
       for (const l of ["Home", "Laptops", "Routers", "Troubleshooting", "Guides"]) await expect(nav.getByRole("link", { name: l })).toBeVisible();
       await expect(page.getByRole("link", { name: "Search" })).toBeVisible();
-      await page.getByRole("banner").getByTestId("open-assistant").click();
+      await page.getByTestId("header-open-assistant").click();
       await expect(page.getByTestId("assistant-panel")).toBeVisible();
     } else {
       await page.getByTestId("menu-toggle").click();

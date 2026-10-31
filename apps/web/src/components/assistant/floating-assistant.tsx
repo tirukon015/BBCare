@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readConsent, subscribeConsent } from "@/lib/client/consent";
 import type { Dictionary } from "@/i18n";
@@ -30,6 +31,9 @@ export function FloatingAssistant({ locale, t, aiEnabled, mock, contacts }: Prop
   // While the privacy banner is on screen the launcher stays out of its way: it must never cover the consent buttons.
   const consent = useSyncExternalStore(subscribeConsent, readConsent, () => "server" as const);
   const bannerShown = consent === null;
+  // The full support page already is the assistant; a second launcher there would only cover its send button.
+  const pathname = usePathname() ?? "";
+  const onSupportPage = /^\/(en|ms)\/support\/?$/.test(pathname);
 
   useEffect(() => {
     if (!open) return;
@@ -52,7 +56,7 @@ export function FloatingAssistant({ locale, t, aiEnabled, mock, contacts }: Prop
 
   return (
     <>
-      {!open && !bannerShown ? (
+      {!open && !bannerShown && !onSupportPage ? (
         <button type="button" onClick={launch} aria-label={c.open} data-testid="assistant-launcher"
           className="fixed bottom-4 right-4 z-40 inline-flex min-h-14 items-center gap-2 rounded-full border border-line bg-white py-1.5 pl-1.5 pr-4 text-sm font-semibold text-ink shadow-[var(--shadow-panel)] hover:border-primary focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary sm:bottom-6 sm:right-6">
           <span className="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary-soft">

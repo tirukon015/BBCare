@@ -47,7 +47,7 @@ export function SiteHeader({ locale, t }: { locale: Locale; t: Dictionary }) {
           <Link href={`/${locale}/search`} aria-label={n.search} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white text-ink-soft hover:border-primary hover:text-primary-dark">
             <Search className="h-4 w-4" aria-hidden="true" />
           </Link>
-          <OpenAssistantButton label={n.ai} className="hidden sm:inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-white shadow-[var(--shadow-card)] hover:bg-primary-dark" withIcon />
+          <OpenAssistantButton label={n.ai} testId="header-open-assistant" className="hidden sm:inline-flex min-h-10 items-center gap-2 whitespace-nowrap rounded-full bg-primary px-4 text-sm font-semibold text-white shadow-[var(--shadow-card)] hover:bg-primary-dark" withIcon />
           <LanguageSwitch locale={locale} label={t.nav.language} short={t.nav.languageShort} />
           <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="mobile-nav" aria-label={open ? n.closeMenu : n.menu} data-testid="menu-toggle"
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white text-ink lg:hidden">
@@ -67,7 +67,7 @@ export function SiteHeader({ locale, t }: { locale: Locale; t: Dictionary }) {
               <li><Link href={`/${locale}/support/case`} className="flex min-h-11 items-center rounded-lg px-3 text-ink hover:bg-sand">{n.case}</Link></li>
             </ul>
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
-              <OpenAssistantButton label={n.ai} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-white" withIcon />
+              <OpenAssistantButton label={n.ai} testId="mobile-open-assistant" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-white" withIcon />
             </div>
           </Container>
         </nav>

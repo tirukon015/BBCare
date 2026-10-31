@@ -62,12 +62,15 @@ test.describe("global floating AI assistant", () => {
     await expect(page.getByTestId("assistant-context")).toContainText("ECR HUA");
   });
 
-  test("launcher does not cover the send button of the full support page or the escalation form", async ({ page }) => {
+  test("launcher stays off the full support page and does not cover the controls of other pages", async ({ page }) => {
     await page.goto("/en/support?model=kaon-ar2140");
     await acceptEssentialOnly(page);
-    const send = page.getByTestId("support-send");
-    await send.scrollIntoViewIfNeeded();
-    const a = await send.boundingBox();
+    await expect(page.getByTestId("support-send")).toBeVisible();
+    await expect(page.getByTestId("assistant-launcher")).toHaveCount(0);
+    await page.goto("/en/support/case");
+    const lookup = page.getByTestId("case-lookup");
+    await lookup.scrollIntoViewIfNeeded();
+    const a = await lookup.boundingBox();
     const b = await page.getByTestId("assistant-launcher").boundingBox();
     expect(a && b && (a.x + a.width <= b.x || a.y + a.height <= b.y || a.y >= b.y + b.height)).toBe(true);
   });

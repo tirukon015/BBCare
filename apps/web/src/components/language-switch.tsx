@@ -15,7 +15,7 @@ export function LanguageSwitch({ locale, label, short }: { locale: Locale; label
       href={`/${target}${rest}${qs ? `?${qs}` : ""}`}
       hrefLang={target}
       lang={target}
-      className="inline-flex h-10 items-center rounded-full border border-line px-3 text-sm font-medium text-ink hover:bg-sand"
+      className="inline-flex h-10 items-center whitespace-nowrap rounded-full border border-line px-3 text-sm font-medium text-ink hover:bg-sand"
       data-track="nav.language"
     >
       <span aria-hidden="true" className="font-semibold sm:mr-1">{short}</span>
