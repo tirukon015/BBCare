@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { SupportMode } from "@bbcare/core";
 import { track } from "@/lib/client/analytics";
@@ -74,12 +75,12 @@ export function useReportFlowStep(stepKey: string | null) {
   }, [stepKey]);
 }
 
-export function OpenAssistantButton({ label, className }: { label: string; className?: string }) {
+export function OpenAssistantButton({ label, className, withIcon = true, testId = "open-assistant" }: { label: string; className?: string; withIcon?: boolean; testId?: string }) {
   const a = useOptionalAssistant();
   return (
-    <button type="button" onClick={() => { track("assistant_opened", { entry: "inline", has_model: !!a?.journey.model }); a?.setOpen(true); }} data-testid="open-assistant"
+    <button type="button" onClick={() => { track("assistant_opened", { entry: "inline", has_model: !!a?.journey.model }); a?.setOpen(true); }} data-testid={testId}
       className={className ?? "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark"}>
-      <ChatIcon className="h-4 w-4" />
+      {withIcon ? <Image src="/brand/bbcare-logo-icon.png" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" /> : null}
       {label}
     </button>
   );

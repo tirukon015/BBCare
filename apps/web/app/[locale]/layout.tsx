@@ -22,6 +22,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     description: t.meta.description,
     alternates: { languages: { en: "/en", ms: "/ms" } },
     robots: process.env.BBCARE_ENV === "production" ? undefined : { index: false, follow: false },
+    icons: { icon: [{ url: "/brand/bbcare-favicon.png", type: "image/png", sizes: "64x64" }], apple: "/brand/bbcare-app-icon.png" },
+    manifest: "/manifest.webmanifest",
   };
 }
 

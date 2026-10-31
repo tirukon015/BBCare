@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { getModel } from "@/modules/catalog/service";
 import { SupportChat } from "@/components/support-chat";
 import { Container } from "@/components/ui";
+import { BrandAvatar } from "@/components/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,13 @@ export default async function SupportPage({ params, searchParams }: { params: Pr
   const e = env();
   return (
     <Container className="max-w-3xl py-8">
-      <h1 className="mb-4 text-2xl font-bold">{t.support.title}</h1>
+      <div className="mb-5 flex items-center gap-3">
+        <BrandAvatar size={44} />
+        <div>
+          <h1 className="text-2xl font-bold">{t.chat.title}</h1>
+          <p className="text-sm text-muted">{t.site.chat.virtual} · {t.site.chat.online}</p>
+        </div>
+      </div>
       <SupportChat
         locale={locale}
         t={t}

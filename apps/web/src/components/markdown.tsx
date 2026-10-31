@@ -1,5 +1,8 @@
 import { Fragment, type ReactNode } from "react";
 
+/** Stable id for a heading (shared with the table of contents). */
+export const headingId = (text: string) => text.toLowerCase().replace(/[*`_]/g, "").replace(/[^a-z0-9\u00C0-\u024F]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "section";
+
 /**
  * Minimal, safe Markdown renderer for reviewed knowledge content. Supports headings,
  * paragraphs, lists, blockquotes, bold, italics and inline code. Raw HTML and links to
@@ -41,7 +44,7 @@ export function Markdown({ source, skipSampleNotes = false }: { source: string; 
     const h = /^(#{2,4})\s+(.*)$/.exec(line);
     if (h) {
       const level = h[1]!.length;
-      blocks.push(level === 2 ? <h2 key={key}>{inline(h[2]!, key)}</h2> : <h3 key={key}>{inline(h[2]!, key)}</h3>);
+      blocks.push(level === 2 ? <h2 key={key} id={headingId(h[2]!)} className="scroll-mt-24">{inline(h[2]!, key)}</h2> : <h3 key={key}>{inline(h[2]!, key)}</h3>);
       i++;
       continue;
     }
@@ -64,7 +67,7 @@ export function Markdown({ source, skipSampleNotes = false }: { source: string; 
     if (/^\s*\d+[.)]\s+/.test(line)) {
       const items: string[] = [];
       while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i]!)) items.push(lines[i++]!.replace(/^\s*\d+[.)]\s+/, ""));
-      blocks.push(<ol key={key}>{items.map((t, j) => <li key={j}>{inline(t, `${key}-${j}`)}</li>)}</ol>);
+      blocks.push(<ol key={key} className="steps">{items.map((t, j) => <li key={j}>{inline(t, `${key}-${j}`)}</li>)}</ol>);
       continue;
     }
     const para: string[] = [];

@@ -8,7 +8,7 @@ const html = (src: string) => renderToStaticMarkup(createElement(Markdown, { sou
 describe("safe markdown renderer", () => {
   it("renders headings, lists and emphasis", () => {
     const out = html("## Steps\n- **Unplug** the router\n- Wait `30s`");
-    expect(out).toContain("<h2>Steps</h2>");
+    expect(out).toContain('<h2 id="steps" class="scroll-mt-24">Steps</h2>');
     expect(out).toContain("<strong>Unplug</strong>");
     expect(out).toContain("<code>30s</code>");
   });

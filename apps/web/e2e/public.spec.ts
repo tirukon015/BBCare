@@ -7,11 +7,11 @@ test.describe("public site", () => {
     await page.goto("/");
     await expect(page).toHaveURL(/\/(en|ms)$/);
     await page.goto("/en");
-    await expect(page.getByRole("heading", { level: 1, name: "Router Mesh Connection support" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /How can we help you today\?/ })).toBeVisible();
     await acceptEssentialOnly(page);
     await page.getByRole("link", { name: /Bahasa Melayu/ }).click();
     await expect(page).toHaveURL(/\/ms$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Sokongan Sambungan Mesh penghala" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /membantu anda hari ini\?/ })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("lang", "ms");
     await expectNoHorizontalScroll(page);
   });
@@ -20,7 +20,7 @@ test.describe("public site", () => {
     await page.goto("/en");
     await acceptEssentialOnly(page);
     await page.getByLabel("Search guides and models").fill("NB-AX3000 wifi slow");
-    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await page.getByRole("button", { name: "Search", exact: true }).first().click();
     await expect(page.getByRole("link", { name: /NB-AX3000: slow Wi-Fi/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Nimbus NB-AX3000/ }).first()).toBeVisible();
     await expectNoHorizontalScroll(page);

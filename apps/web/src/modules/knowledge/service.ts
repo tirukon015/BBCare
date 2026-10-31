@@ -1,33 +1,54 @@
 import "server-only";
 import { db } from "@/lib/db";
 import type { Locale } from "@/i18n";
+import { headingId } from "@/components/markdown";
 
 export interface ArticleCard {
   id: string; slug: string; kind: string; categorySlug: string; title: string; summary: string;
   safetyLevel: "normal" | "caution" | "danger"; locale: Locale; models: string[];
+  /** Estimated reading time from the body length (about 180 words a minute), at least one minute. */
+  readingMinutes: number;
+  publishedAt: string | null;
 }
 
+export type ArticleKind = "guide" | "troubleshooting" | "faq" | "reference";
+export const readingMinutes = (words: number) => Math.max(1, Math.round(words / 180));
+
 /** Published articles in the requested locale, falling back to the other locale per article. */
-export async function listArticles(opts: { locale: Locale; categorySlug?: string; modelId?: string | null; generalOnly?: boolean; limit?: number }): Promise<ArticleCard[]> {
+export async function listArticles(opts: { locale: Locale; categorySlug?: string; modelId?: string | null; generalOnly?: boolean; limit?: number; kinds?: ArticleKind[]; excludeId?: string | null }): Promise<ArticleCard[]> {
+  const kinds = opts.kinds ?? null;
   const rows = await db()<{
     id: string; slug: string; kind: string; category_slug: string; title: string; summary: string; safety_level: "normal" | "caution" | "danger";
-    locale: Locale; models: string[] | null;
+    locale: Locale; models: string[] | null; words: number; published_at: string | null;
   }[]>`
-    SELECT DISTINCT ON (a.id) a.id, a.slug, a.kind, c.slug AS category_slug, r.title, r.summary, r.safety_level, r.locale,
-      (SELECT array_agg(DISTINCT m.display_name) FROM knowledge.applicability ap JOIN catalog.product_models m ON m.id = ap.model_id WHERE ap.revision_id = r.id) AS models
-    FROM knowledge.articles a
-    JOIN catalog.categories c ON c.id = a.category_id
-    JOIN knowledge.revisions r ON r.article_id = a.id AND r.status = 'published'
-    WHERE a.archived_at IS NULL
-      AND (${opts.categorySlug ?? null}::text IS NULL OR c.slug = ${opts.categorySlug ?? null})
-      AND (${opts.modelId ?? null}::uuid IS NULL OR EXISTS (SELECT 1 FROM knowledge.applicability ap WHERE ap.revision_id = r.id AND ap.model_id = ${opts.modelId ?? null}::uuid))
-      AND (NOT ${opts.generalOnly ?? false} OR NOT EXISTS (SELECT 1 FROM knowledge.applicability ap WHERE ap.revision_id = r.id AND ap.model_id IS NOT NULL))
-    ORDER BY a.id, (r.locale = ${opts.locale}) DESC
+    SELECT * FROM (
+      SELECT DISTINCT ON (a.id) a.id, a.slug, a.kind, c.slug AS category_slug, r.title, r.summary, r.safety_level, r.locale, r.published_at::text,
+        array_length(regexp_split_to_array(r.body_md, '\\s+'), 1) AS words,
+        (SELECT array_agg(DISTINCT m.display_name) FROM knowledge.applicability ap JOIN catalog.product_models m ON m.id = ap.model_id WHERE ap.revision_id = r.id) AS models
+      FROM knowledge.articles a
+      JOIN catalog.categories c ON c.id = a.category_id
+      JOIN knowledge.revisions r ON r.article_id = a.id AND r.status = 'published'
+      WHERE a.archived_at IS NULL AND c.active
+        AND (${opts.categorySlug ?? null}::text IS NULL OR c.slug = ${opts.categorySlug ?? null})
+        AND (${kinds}::text[] IS NULL OR a.kind = ANY (${kinds}::text[]))
+        AND (${opts.excludeId ?? null}::uuid IS NULL OR a.id <> ${opts.excludeId ?? null}::uuid)
+        AND (${opts.modelId ?? null}::uuid IS NULL OR EXISTS (SELECT 1 FROM knowledge.applicability ap WHERE ap.revision_id = r.id AND ap.model_id = ${opts.modelId ?? null}::uuid))
+        AND (NOT ${opts.generalOnly ?? false} OR NOT EXISTS (SELECT 1 FROM knowledge.applicability ap WHERE ap.revision_id = r.id AND ap.model_id IS NOT NULL))
+      ORDER BY a.id, (r.locale = ${opts.locale}) DESC) x
+    ORDER BY published_at DESC NULLS LAST
     LIMIT ${opts.limit ?? 50}`;
   return rows.map((r) => ({
     id: r.id, slug: r.slug, kind: r.kind, categorySlug: r.category_slug, title: r.title, summary: r.summary,
-    safetyLevel: r.safety_level, locale: r.locale, models: r.models ?? [],
+    safetyLevel: r.safety_level, locale: r.locale, models: r.models ?? [], readingMinutes: readingMinutes(r.words ?? 0), publishedAt: r.published_at,
   }));
+}
+
+/** Second-level headings of a Markdown body, for a table of contents. Ids match the renderer. */
+export function articleHeadings(bodyMd: string): { id: string; text: string }[] {
+  return bodyMd.split("\n").flatMap((line) => {
+    const h = /^##\s+(.*)$/.exec(line);
+    return h ? [{ id: headingId(h[1]!), text: h[1]!.replace(/[*`_]/g, "") }] : [];
+  });
 }
 
 export interface ArticleDetail extends ArticleCard {
@@ -60,6 +81,7 @@ export async function getArticle(slug: string, locale: Locale): Promise<ArticleD
   return {
     id: r.id, slug: r.slug, kind: r.kind, categorySlug: r.category_slug, title: r.title, summary: r.summary, safetyLevel: r.safety_level,
     locale: r.locale, models: appl.filter((a) => a.model_name).map((a) => a.model_name!), revisionId: r.revision_id, bodyMd: r.body_md,
+    readingMinutes: readingMinutes(r.body_md.split(/\s+/).length),
     publishedAt: r.published_at, localeFallback: r.locale !== locale,
     sources, appliesTo: appl.map((a) => ({ modelId: a.model_id, modelName: a.model_name, modelSlug: a.model_slug, categoryId: a.category_id, firmware: a.firmware_versions })),
   };

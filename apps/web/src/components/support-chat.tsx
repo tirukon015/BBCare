@@ -7,10 +7,23 @@ import { attributionPayload } from "@/lib/client/attribution";
 import type { AssistantPayload } from "@/modules/support/service";
 import { track } from "@/lib/client/analytics";
 import { EscalationForm } from "./escalation-form";
+import { BrandAvatar } from "./brand";
 
 type Msg =
-  | { id: string; role: "customer"; text: string }
-  | { id: string; role: "assistant"; payload: AssistantPayload; feedback?: 1 | -1 };
+  | { id: string; role: "customer"; text: string; at: number }
+  | { id: string; role: "assistant"; payload: AssistantPayload; feedback?: 1 | -1; at: number };
+
+const timeOf = (at: number, locale: "en" | "ms") => new Date(at).toLocaleTimeString(locale === "ms" ? "ms-MY" : "en-MY", { hour: "2-digit", minute: "2-digit" });
+
+/** Three pulsing dots while the assistant is working (respects reduced motion through the global rule). */
+function TypingIndicator({ label }: { label: string }) {
+  return (
+    <span role="status" aria-label={label} className="inline-flex items-center gap-1 rounded-2xl rounded-bl-sm border border-line bg-white px-4 py-3" data-testid="typing-indicator">
+      {[0, 150, 300].map((d) => <span key={d} className="h-2 w-2 animate-bounce rounded-full bg-primary" style={{ animationDelay: `${d}ms` }} />)}
+      <span className="sr-only">{label}</span>
+    </span>
+  );
+}
 
 interface Props {
   locale: "en" | "ms";
@@ -70,7 +83,7 @@ export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEsc
     setBusy(true);
     setError(null);
     const localId = crypto.randomUUID();
-    setMessages((m) => [...m, { id: localId, role: "customer", text: clean }]);
+    setMessages((m) => [...m, { id: localId, role: "customer", text: clean, at: Date.now() }]);
     try {
       const id = await ensureSession();
       const res = await fetch(`/api/public/support/sessions/${id}/messages`, {
@@ -83,7 +96,7 @@ export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEsc
       const data = (await res.json()) as { id: string; outcome: string; payload: AssistantPayload };
       if (data.payload.resolvedModel) setModel(data.payload.resolvedModel);
       if (data.payload.aiUnavailable) track("ai_unavailable", { support_session: id });
-      setMessages((m) => [...m, { id: data.id, role: "assistant", payload: data.payload }]);
+      setMessages((m) => [...m, { id: data.id, role: "assistant", payload: data.payload, at: Date.now() }]);
       track("support_message_submitted", {
         support_session: id,
         length_bucket: lengthBucket(clean.length),
@@ -154,31 +167,52 @@ export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEsc
       ) : null}
 
       <ol ref={logRef} aria-live="polite" aria-label={s.title} className="flex flex-col gap-3" data-testid={compact ? "assistant-log" : "support-log"}>
-        {messages.length === 0 ? <li className="text-sm text-muted">{s.started}</li> : null}
+        {messages.length === 0 ? (
+          <li className="flex items-start gap-2" data-testid="chat-welcome">
+            <BrandAvatar size={32} className="mt-1" />
+            <div className="min-w-0">
+              <div className="rounded-2xl rounded-bl-sm border border-line bg-white px-4 py-3 text-sm text-ink">{t.site.chat.welcome}</div>
+              <div className="mt-2 flex flex-wrap gap-2" data-testid="chat-suggestions">
+                {t.site.chat.suggestions.map((q) => (
+                  <button key={q} type="button" onClick={() => void send(q)} className="min-h-9 rounded-full border border-primary-soft bg-primary-soft px-3 text-xs font-medium text-primary-dark hover:border-primary">{q}</button>
+                ))}
+              </div>
+            </div>
+          </li>
+        ) : null}
         {messages.map((m) =>
           m.role === "customer" ? (
-            <li key={m.id} className="self-end max-w-[85%] rounded-2xl rounded-br-sm bg-ink px-4 py-2 text-white">
-              <span className="sr-only">{s.you}: </span>
-              {m.text}
+            <li key={m.id} className="flex max-w-[85%] flex-col items-end self-end">
+              <div className="rounded-2xl rounded-br-sm bg-primary px-4 py-2 text-white">
+                <span className="sr-only">{s.you}: </span>
+                {m.text}
+              </div>
+              <time className="mt-1 text-[11px] text-muted" dateTime={new Date(m.at).toISOString()}>{timeOf(m.at, locale)}</time>
             </li>
           ) : (
-            <li key={m.id} className="max-w-full rounded-2xl rounded-bl-sm border border-line bg-white px-4 py-3 sm:max-w-[90%]" lang={m.payload.language}>
-              <span className="sr-only">{s.assistant}: </span>
-              <AssistantMessage payload={m.payload} t={t} locale={locale} onChoose={chooseModel} />
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-2 text-sm">
-                {m.feedback ? (
-                  <span className="text-ok" role="status">{t.article.thanks}</span>
-                ) : (
-                  <>
-                    <button type="button" className="min-h-11 rounded-md px-3 hover:bg-sand" onClick={() => feedback(m.id, 1)} data-testid="msg-helpful">{s.helpful}</button>
-                    <button type="button" className="min-h-11 rounded-md px-3 hover:bg-sand" onClick={() => feedback(m.id, -1)} data-testid="msg-not-helpful">{s.notHelpful}</button>
-                  </>
-                )}
+            <li key={m.id} className="flex max-w-full items-start gap-2 sm:max-w-[92%]" lang={m.payload.language}>
+              <BrandAvatar size={32} className="mt-1" />
+              <div className="min-w-0 flex-1">
+                <div className="rounded-2xl rounded-bl-sm border border-line bg-white px-4 py-3">
+                  <span className="sr-only">{s.assistant}: </span>
+                  <AssistantMessage payload={m.payload} t={t} locale={locale} onChoose={chooseModel} />
+                  <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-2 text-sm">
+                    {m.feedback ? (
+                      <span className="text-ok" role="status">{t.article.thanks}</span>
+                    ) : (
+                      <>
+                        <button type="button" className="min-h-9 rounded-md px-3 hover:bg-sand" onClick={() => feedback(m.id, 1)} data-testid="msg-helpful">{s.helpful}</button>
+                        <button type="button" className="min-h-9 rounded-md px-3 hover:bg-sand" onClick={() => feedback(m.id, -1)} data-testid="msg-not-helpful">{s.notHelpful}</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <time className="mt-1 block text-[11px] text-muted" dateTime={new Date(m.at).toISOString()}>{s.assistant} · {timeOf(m.at, locale)}</time>
               </div>
             </li>
           ),
         )}
-        {busy ? <li className="text-sm text-muted" role="status">{s.sending}</li> : null}
+        {busy ? <li className="flex items-start gap-2"><BrandAvatar size={32} className="mt-1" /><TypingIndicator label={t.site.chat.typing} /></li> : null}
       </ol>
 
       {error ? <p role="alert" className="rounded-lg border border-danger-soft bg-danger-soft px-4 py-2 text-sm text-danger">{error}</p> : null}
@@ -201,9 +235,9 @@ export function SupportChat({ locale, t, aiEnabled, mock, initialModel, startEsc
             rows={compact ? 1 : 2}
             maxLength={1000}
             placeholder={compact ? s.placeholderShort : s.placeholder}
-            className="min-h-11 w-full resize-y rounded-lg border border-line bg-white px-3 py-2 text-base"
+            className="min-h-11 w-full resize-y rounded-2xl border border-line bg-white px-4 py-2 text-base focus:border-primary"
           />
-          <button type="submit" disabled={busy || !text.trim()} className="min-h-11 shrink-0 rounded-lg bg-olive px-5 text-sm font-semibold text-white hover:bg-olive-dark disabled:opacity-60" data-testid="support-send">
+          <button type="submit" disabled={busy || !text.trim()} className="min-h-11 shrink-0 rounded-full bg-primary px-5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-60" data-testid="support-send">
             {busy ? s.sending : s.send}
           </button>
         </form>

@@ -6,7 +6,8 @@ import { readConsent, subscribeConsent } from "@/lib/client/consent";
 import type { Dictionary } from "@/i18n";
 import { track } from "@/lib/client/analytics";
 import { SupportChat } from "../support-chat";
-import { ChatIcon, useAssistant } from "./router-context";
+import { useAssistant } from "./router-context";
+import { BrandAvatar, BrandIcon } from "../brand";
 
 interface Props {
   locale: "en" | "ms";
@@ -53,9 +54,12 @@ export function FloatingAssistant({ locale, t, aiEnabled, mock, contacts }: Prop
     <>
       {!open && !bannerShown ? (
         <button type="button" onClick={launch} aria-label={c.open} data-testid="assistant-launcher"
-          className="fixed bottom-4 right-4 z-40 inline-flex min-h-14 items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-panel)] hover:bg-primary-dark focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary-dark sm:bottom-6 sm:right-6">
-          <ChatIcon className="h-6 w-6" />
-          <span className="hidden sm:inline">{c.title}</span>
+          className="fixed bottom-4 right-4 z-40 inline-flex min-h-14 items-center gap-2 rounded-full border border-line bg-white py-1.5 pl-1.5 pr-4 text-sm font-semibold text-ink shadow-[var(--shadow-panel)] hover:border-primary focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary sm:bottom-6 sm:right-6">
+          <span className="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary-soft">
+            <BrandIcon size={34} />
+            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-ok" aria-hidden="true" />
+          </span>
+          <span className="hidden sm:inline">{t.site.nav.ai}</span>
         </button>
       ) : null}
 
@@ -63,10 +67,10 @@ export function FloatingAssistant({ locale, t, aiEnabled, mock, contacts }: Prop
         <div ref={panelRef} role="dialog" aria-modal="false" aria-labelledby="assistant-title" data-testid="assistant-panel" data-minimised={minimised ? "1" : "0"}
           className={`fixed inset-x-0 bottom-0 z-50 flex flex-col overflow-hidden rounded-t-2xl border border-line bg-white shadow-[var(--shadow-panel)] sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[26rem] sm:rounded-2xl ${minimised ? "max-h-16" : "max-h-[88dvh] sm:max-h-[min(44rem,calc(100dvh-3rem))]"}`}>
           <div className="flex items-center gap-3 border-b border-line bg-primary px-4 py-3 text-white">
-            <ChatIcon className="h-5 w-5 shrink-0" />
+            <BrandAvatar size={36} className="ring-0" />
             <div className="min-w-0 flex-1">
               <h2 id="assistant-title" tabIndex={-1} className="truncate text-sm font-semibold outline-none">{c.title}</h2>
-              {!minimised ? <p className="truncate text-xs text-white/85">{contextLine ?? c.scope}</p> : null}
+              {!minimised ? <p className="truncate text-xs text-white/85"><span className="inline-block h-2 w-2 rounded-full bg-teal align-middle" aria-hidden="true" /> {t.site.chat.online} · {t.site.chat.virtual}{contextLine ? ` · ${contextLine}` : ""}</p> : null}
             </div>
             <button type="button" onClick={() => setMinimised((m) => !m)} aria-label={c.minimise} aria-pressed={minimised} data-testid="assistant-minimise"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-white/15">

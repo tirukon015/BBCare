@@ -78,9 +78,14 @@ export async function getModel(slug: string, locale: Locale): Promise<ModelDetai
   };
 }
 
-export async function listBrands(categorySlug: string): Promise<{ slug: string; name: string }[]> {
-  return db()<{ slug: string; name: string }[]>`
-    SELECT DISTINCT b.slug, b.name FROM catalog.brands b
-    JOIN catalog.product_models m ON m.brand_id = b.id JOIN catalog.categories c ON c.id = m.category_id
-    WHERE c.slug = ${categorySlug} AND b.active ORDER BY b.name`;
+export async function listBrands(categorySlug: string): Promise<{ slug: string; name: string; models: number }[]> {
+  return [...(await db()<{ slug: string; name: string; models: number }[]>`
+    SELECT b.slug, b.name, count(m.id)::int AS models FROM catalog.brands b
+    JOIN catalog.product_models m ON m.brand_id = b.id AND m.status <> 'hidden' JOIN catalog.categories c ON c.id = m.category_id
+    WHERE c.slug = ${categorySlug} AND c.active AND b.active GROUP BY b.slug, b.name ORDER BY b.name`)];
+}
+
+/** Other visible models of the same brand and category. */
+export async function listRelatedModels(model: Pick<ModelSummary, "id" | "brandSlug" | "categorySlug">, locale: Locale, limit = 6): Promise<ModelSummary[]> {
+  return (await listModels(model.categorySlug, locale, model.brandSlug)).filter((m) => m.id !== model.id).slice(0, limit);
 }

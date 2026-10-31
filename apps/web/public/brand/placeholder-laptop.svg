@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" role="img" aria-label="Laptop illustration placeholder">
+  <rect width="320" height="200" rx="20" fill="#EAF5FF"/>
+  <rect x="76" y="44" width="168" height="104" rx="10" fill="#FFFFFF" stroke="#1769E8" stroke-width="4"/>
+  <rect x="90" y="58" width="140" height="76" rx="4" fill="#DCEEFF"/>
+  <path d="M52 152h216l14 16H38z" fill="#FFFFFF" stroke="#1769E8" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="140" y="156" width="40" height="5" rx="2" fill="#20A9D5"/>
+</svg>

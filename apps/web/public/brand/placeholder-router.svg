@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" role="img" aria-label="Router illustration placeholder">
+  <rect width="320" height="200" rx="20" fill="#EAF5FF"/>
+  <g stroke="#1769E8" stroke-width="4" stroke-linecap="round" fill="none">
+    <line x1="92" y1="112" x2="78" y2="58"/><line x1="140" y1="112" x2="136" y2="52"/><line x1="188" y1="112" x2="192" y2="52"/><line x1="236" y1="112" x2="250" y2="58"/>
+  </g>
+  <rect x="48" y="112" width="224" height="52" rx="14" fill="#FFFFFF" stroke="#1769E8" stroke-width="4"/>
+  <circle cx="84" cy="138" r="5" fill="#20A9D5"/><circle cx="104" cy="138" r="5" fill="#20A9D5"/><circle cx="124" cy="138" r="5" fill="#48C4B7"/>
+</svg>

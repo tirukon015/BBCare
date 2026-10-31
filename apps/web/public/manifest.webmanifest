@@ -1,0 +1,10 @@
+{
+  "name": "BBCare",
+  "short_name": "BBCare",
+  "description": "Customer Care & Support Platform by BBTech.shop",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7fbff",
+  "theme_color": "#1769e8",
+  "icons": [{ "src": "/brand/bbcare-app-icon.png", "sizes": "512x512", "type": "image/png" }]
+}

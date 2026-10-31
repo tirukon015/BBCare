@@ -29,7 +29,7 @@ test.describe("router support journey", () => {
     test(`homepage (${locale}) shows all seven router cards with names, codes, own placeholders and links`, async ({ page }) => {
       await page.goto(`/${locale}`);
       await acceptEssentialOnly(page);
-      await expect(page.getByRole("heading", { name: locale === "ms" ? "Pilih penghala anda" : "Choose your router" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: locale === "ms" ? "Penghala yang disokong" : "Supported routers" })).toBeVisible();
       await expect(page.getByTestId("router-catalogue-unavailable")).toHaveCount(0);
       const cards = page.getByTestId("router-model");
       await expect(cards).toHaveCount(7);
@@ -40,7 +40,6 @@ test.describe("router support journey", () => {
         // Each card has its own placeholder for its own model until a verified photo exists.
         await expect(cards.nth(i).getByTestId("image-pending")).toHaveAttribute("data-ecr", ecr);
       }
-      await expect(page.getByRole("navigation", { name: "Main" })).not.toContainText(/Laptop/);
       await expect(page.locator("main")).not.toContainText(/Nimbus|Kestrel/);
       await expectNoHorizontalScroll(page);
       // Each card opens its own Mesh Connection page; no other category is presented.
@@ -56,8 +55,12 @@ test.describe("router support journey", () => {
     });
   }
 
-  test("laptop support is gone and readiness reports the complete catalogue", async ({ page, request }) => {
-    expect((await page.goto("/en/laptops"))?.status()).toBe(404);
+  test("laptop support shows an honest empty state until content exists, and readiness reports the complete catalogue", async ({ page, request }) => {
+    expect((await page.goto("/en/laptops"))?.status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1, name: "Find your laptop. Get the right solution." })).toBeVisible();
+    await expect(page.getByText("Laptop support content is being prepared")).toBeVisible();
+    await expect(page.getByTestId("laptop-issues").getByTestId("issue-battery")).toBeVisible();
+    await expect(page.locator("main")).not.toContainText(/HP|Lenovo|Dell|ASUS/);
     const ready = await request.get("/api/health/ready");
     expect(await ready.json()).toMatchObject({ status: "ready", routerModels: 7 });
   });

@@ -1,23 +1,25 @@
 @import "tailwindcss";
 
 /*
- * BBCare design tokens. Sky-blue and blue customer-support palette (temporary foundation, easy to
- * retheme): change the semantic tokens below and every component follows. The older "olive" and
- * "sand" names are kept as aliases so existing components need no rewrite. No gradients.
+ * BBCare design tokens. Blue, cyan and teal palette taken from the official BBCare logo. Change the
+ * semantic tokens and every component follows; the older "olive" and "sand" names stay as aliases.
  */
 @theme {
-  /* Semantic palette */
-  --color-brand: #1677d2;          /* the suggested primary blue; decorative and large elements only (4.3:1 on the light sky surface) */
-  --color-primary: #1365b8;        /* primary blue for text, buttons and links: 5.5:1 on the light sky surface, 5.9:1 on white */
-  --color-primary-dark: #075985;   /* hover, emphasis */
-  --color-primary-soft: #e0f2fe;   /* soft fills behind primary content */
-  --color-sky: #38bdf8;            /* accent only, never for text on white */
+  /* Semantic palette, aligned with the official BBCare logo (blue, cyan, teal, white) */
+  --color-brand: #1769e8;          /* primary blue from the brand guide */
+  --color-primary: #1769e8;        /* buttons, links, active states (4.8:1 on the page background) */
+  --color-primary-dark: #1259cc;   /* hover and text on light-blue panels (5.7:1 on light sky) */
+  --color-deep: #243d80;           /* deep blue headings and emphasis */
+  --color-primary-soft: #eaf5ff;   /* light sky fills */
+  --color-cyan: #20a9d5;           /* accent only, never body text */
+  --color-teal: #48c4b7;           /* accent only */
+  --color-sky: #38bdf8;
   --color-surface: #ffffff;
-  --color-surface-soft: #f0f9ff;   /* light sky page background and soft panels */
-  --color-border: #e0f2fe;
-  --color-text: #0f172a;
-  --color-text-soft: #334155;
-  --color-text-muted: #475569;     /* 7:1 on the light sky surface; #64748b fails AA there */
+  --color-surface-soft: #f7fbff;   /* page background */
+  --color-border: #dbe9f8;
+  --color-text: #14243d;
+  --color-text-soft: #334a66;
+  --color-text-muted: #5b6b82;     /* 4.9:1 on light sky */
 
   /* Component tokens used by Tailwind classes (bg-paper, text-ink, border-line, bg-olive ...) */
   --color-ink: var(--color-text);
@@ -25,7 +27,7 @@
   --color-muted: var(--color-text-muted);
   --color-line: var(--color-border);
   --color-paper: var(--color-surface-soft);
-  --color-sand: #eaf5fd;
+  --color-sand: #eef6fd;
   --color-white: var(--color-surface);
   --color-olive: var(--color-primary);
   --color-olive-dark: var(--color-primary-dark);
@@ -35,11 +37,11 @@
   --color-danger: #b42318;
   --color-danger-soft: #fee4e2;
   --color-ok: #15803d;
-  --color-chart: #1365b8; /* validated: contrast against white and the light sky surface */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
-  --radius-card: 0.875rem;
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px rgb(22 119 210 / 0.06);
-  --shadow-panel: 0 8px 32px rgb(15 23 42 / 0.18);
+  --color-chart: #1769e8;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 2px rgb(20 36 61 / 0.04), 0 6px 16px rgb(23 105 232 / 0.07);
+  --shadow-panel: 0 12px 40px rgb(20 36 61 / 0.18);
 }
 
 html {
@@ -71,3 +73,14 @@ body {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* Soft brand backdrop used behind hero sections: two faint radial washes, no hard gradient bands. */
+.hero-glow {
+  background:
+    radial-gradient(60% 80% at 85% 20%, rgb(32 169 213 / 0.16) 0%, transparent 60%),
+    radial-gradient(50% 70% at 10% 90%, rgb(23 105 232 / 0.10) 0%, transparent 60%),
+    var(--color-surface);
+}
+.prose-bb ol.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.prose-bb ol.steps > li { counter-increment: step; position: relative; padding-left: 2.75rem; margin: 0.9rem 0; }
+.prose-bb ol.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0.1rem; width: 2rem; height: 2rem; border-radius: 9999px; background: var(--color-primary); color: #fff; font-weight: 700; font-size: 0.875rem; display: flex; align-items: center; justify-content: center; }

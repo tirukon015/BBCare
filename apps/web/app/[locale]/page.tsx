@@ -1,61 +1,72 @@
+import Link from "next/link";
 import { getDictionary, localeOrDefault } from "@/i18n";
 import { listRouterModels } from "@/modules/router/service";
+import { listArticles } from "@/modules/knowledge/service";
 import { RouterModelGrid } from "@/components/router/model-card";
 import { OpenAssistantButton } from "@/components/assistant/router-context";
 import { SearchForm } from "@/components/search-form";
-import { ButtonLink, Container, SectionHeading } from "@/components/ui";
+import { EmptyState, GuideCard, HeroVisual, IssueCard, PageHero, ProductEntryCard, SectionHeader } from "@/components/site-cards";
+import { ButtonLink, Container } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const locale = localeOrDefault((await params).locale);
   const t = getDictionary(locale);
-  // The seven-router catalogue comes from the catalogue tables alone: no customer data is involved.
-  const models = await listRouterModels();
+  const s = t.site;
+  // Catalogue and guides come from the published tables only; the page never depends on customer records.
+  const [models, guides] = await Promise.all([listRouterModels(), listArticles({ locale, limit: 4 })]);
+  const q = (term: string) => `/${locale}/search?q=${encodeURIComponent(term)}`;
+  const issues = [...s.issues.router.slice(0, 4), ...s.issues.laptop.slice(0, 5)];
   return (
     <>
-      <section className="border-b border-line bg-white">
-        <Container className="py-10 sm:py-14">
-          <p className="text-sm font-semibold uppercase tracking-wide text-primary">{t.meta.title} · {t.chat.scope}</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink sm:text-4xl">{t.home.heading}</h1>
-          <p className="mt-3 max-w-2xl text-ink-soft">{t.home.intro}</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <ButtonLink href="#routers" data-track="home.start">{t.home.startCta}</ButtonLink>
-            <OpenAssistantButton label={t.home.aiCta} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-primary bg-white px-4 py-2 text-sm font-semibold text-primary-dark hover:bg-primary-soft" />
-          </div>
-          <p className="mt-2 text-xs text-muted">{t.home.aiNote}</p>
-          <div className="mt-6 max-w-2xl">
-            <SearchForm locale={locale} t={t} />
-          </div>
-        </Container>
-      </section>
-      <Container className="mt-8">
-        <div id="routers" className="scroll-mt-6">
-          <SectionHeading>{t.router.pickTitle}</SectionHeading>
-          <p className="-mt-2 mb-4 text-sm text-ink-soft">{t.router.pickIntro}</p>
-          <RouterModelGrid models={models} locale={locale} t={t} />
+      <PageHero eyebrow={s.home.badge} intro={s.home.intro} visual={<HeroVisual laptopAlt={s.home.laptopTitle} routerAlt={s.home.routerTitle} />}
+        title={<>{s.home.heading1} <span className="text-primary">{s.home.heading2}</span></>}>
+        <div className="max-w-2xl"><SearchForm locale={locale} t={t} size="lg" /></div>
+        <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+          <span className="font-medium">{s.home.popular}</span>
+          {s.home.popularTerms.map((term) => <Link key={term} href={q(term)} data-track="home.popular_term" className="rounded-full border border-line bg-white px-3 py-1 text-xs font-medium text-ink-soft hover:border-primary hover:text-primary-dark">{term}</Link>)}
+        </p>
+      </PageHero>
+
+      <Container className="mt-8 grid gap-4 md:grid-cols-2">
+        <ProductEntryCard href={`/${locale}/laptops`} title={s.home.laptopTitle} body={s.home.laptopBody} kind="laptop" cta={s.nav.laptops} />
+        <ProductEntryCard href={`/${locale}/routers`} title={s.home.routerTitle} body={s.home.routerBody} kind="router" cta={s.nav.routers} />
+      </Container>
+
+      <Container className="mt-12">
+        <SectionHeader title={s.home.troubleshooting} href={`/${locale}/troubleshooting`} linkLabel={s.home.viewAll} />
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" data-testid="popular-issues">
+          {issues.map((i) => <li key={`${i.key}-${i.title}`}><IssueCard href={q(i.q)} title={i.title} iconKey={i.key} /></li>)}
+        </ul>
+      </Container>
+
+      <Container className="mt-12">
+        <SectionHeader id="routers" title={s.home.routersTitle} intro={s.home.routersIntro} href={`/${locale}/routers`} linkLabel={s.home.viewAll} />
+        <RouterModelGrid models={models} locale={locale} t={t} />
+      </Container>
+
+      <Container className="mt-12">
+        <SectionHeader title={s.home.latestGuides} href={`/${locale}/guides`} linkLabel={s.home.viewAll} />
+        {guides.length === 0 ? <EmptyState title={s.home.noGuides} /> : (
+          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {guides.map((a) => <li key={a.id}><GuideCard a={a} locale={locale} t={t} kindLabel={s.article.kind[a.kind as keyof typeof s.article.kind] ?? a.kind} /></li>)}
+          </ul>
+        )}
+      </Container>
+
+      <Container className="mt-12 grid gap-4 md:grid-cols-2">
+        <div className="rounded-[var(--radius-card)] border border-primary-soft bg-primary-soft p-6">
+          <h2 className="text-lg font-bold text-ink">{s.home.aiTitle}</h2>
+          <p className="mt-1 text-sm text-ink-soft">{s.home.aiBody}</p>
+          <div className="mt-4"><OpenAssistantButton label={s.home.aiCta} testId="home-open-assistant" /></div>
         </div>
-      </Container>
-      <Container className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">{t.home.stepsTitle}</h2>
-        <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="how-it-works">
-          {t.home.steps.map((step, i) => (
-            <li key={step} className="flex gap-3 rounded-[var(--radius-card)] border border-line bg-white p-4 shadow-[var(--shadow-card)]">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary-dark">{i + 1}</span>
-              <span className="text-sm text-ink-soft">{step}</span>
-            </li>
-          ))}
-        </ol>
-      </Container>
-      <Container className="mt-10">
-        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-white p-6 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">{t.home.humanTitle}</h2>
-            <p className="text-sm text-ink-soft">{t.home.humanBody}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <ButtonLink href={`/${locale}/support/case`} variant="secondary" data-track="home.case">{t.router.checkCase}</ButtonLink>
-            <ButtonLink href={`/${locale}/contact`} variant="secondary" data-track="home.contact">{t.home.humanCta}</ButtonLink>
+        <div className="rounded-[var(--radius-card)] border border-line bg-white p-6 shadow-[var(--shadow-card)]">
+          <h2 className="text-lg font-bold text-ink">{s.home.humanTitle}</h2>
+          <p className="mt-1 text-sm text-ink-soft">{s.home.humanBody}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <ButtonLink href={`/${locale}/support/case`} variant="secondary" data-track="home.case">{s.nav.case}</ButtonLink>
+            <ButtonLink href={`/${locale}/contact`} variant="secondary" data-track="home.contact">{s.home.humanCta}</ButtonLink>
           </div>
         </div>
       </Container>
