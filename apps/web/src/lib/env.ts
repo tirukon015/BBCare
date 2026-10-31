@@ -23,6 +23,7 @@ const schema = z.object({
   BBCARE_SUPPORT_CONTACT_WHATSAPP: z.string().regex(/^\d{8,15}$/).optional().or(z.literal("")),
   BBCARE_SUPPORT_CONTACT_EMAIL: z.email().optional().or(z.literal("")),
   BBCARE_HEALTH_TOKEN: z.string().optional(),
+  BBCARE_STAFF_LOGIN_DOMAIN: z.string().regex(/^[a-z0-9.-]+\.[a-z]{2,}$/i).optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 });
 

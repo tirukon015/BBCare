@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { seedPassword } from "./helpers";
 
 test.describe("security controls", () => {
   test.beforeEach(({}, info) => {
@@ -30,6 +31,27 @@ test.describe("security controls", () => {
     expect(ok.status()).toBe(200);
     const stolen = await request.post(`/api/public/support/sessions/${sessionId}/messages`, { data: { text: "x" }, headers: { origin: "http://localhost:3100", cookie: "bbcare_support=forged.token" } });
     expect(stolen.status()).toBe(404);
+  });
+
+  test("second factor rejects a fixed code and a wrong code; no bypass exists", async ({ page }) => {
+    await page.goto("/admin/login");
+    await page.getByLabel(/Email/).fill("analyst@bbcare.test");
+    await page.getByLabel("Password").fill(seedPassword());
+    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: /two-factor authentication/i })).toBeVisible();
+    if ((await page.getByRole("heading", { level: 1 }).innerText()).startsWith("Set up")) {
+      // Not enrolled yet in this run: the enrolment step must also refuse a fixed code.
+      await page.getByLabel("6-digit code").fill("111111");
+      await page.getByRole("button", { name: /Turn on two-factor/ }).click();
+      await expect(page.getByRole("alert")).toBeVisible();
+    } else {
+      for (const code of ["111111", "000000"]) {
+        await page.getByLabel("Code").fill(code);
+        await page.getByRole("button", { name: "Verify" }).click();
+        await expect(page).toHaveURL(/\/admin\/mfa\?e=invalid/);
+      }
+    }
+    expect((await page.goto("/admin"))?.url()).toMatch(/\/admin\/(login|mfa)/);
   });
 
   test("event endpoint rejects unknown properties and server-only events", async ({ request }) => {
