@@ -68,7 +68,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ locale
               <ol className="mt-2 space-y-1">{headings.map((h, i) => <li key={h.id}><a href={`#${h.id}`} className="text-ink-soft hover:text-primary-dark"><span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">{i + 1}</span>{h.text}</a></li>)}</ol>
             </nav>
           ) : null}
-          <div className="prose-bb mt-6 rounded-[var(--radius-card)] border border-line bg-white p-5 shadow-[var(--shadow-card)] sm:p-8">
+          <div className={`prose-bb mt-6 rounded-[var(--radius-card)] border border-line bg-white p-5 shadow-[var(--shadow-card)] sm:p-8 ${headings.length >= 2 ? "prose-numbered" : ""}`}>
             <Markdown source={a.bodyMd} />
           </div>
           {a.sources.length > 0 ? (

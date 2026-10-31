@@ -81,6 +81,10 @@ body {
     radial-gradient(50% 70% at 10% 90%, rgb(23 105 232 / 0.10) 0%, transparent 60%),
     var(--color-surface);
 }
+/* Article bodies: second-level headings are numbered to match the table of contents. */
+.prose-numbered { counter-reset: section; }
+.prose-numbered h2 { counter-increment: section; display: flex; align-items: center; gap: 0.6rem; }
+.prose-numbered h2::before { content: counter(section); flex: none; width: 1.75rem; height: 1.75rem; border-radius: 9999px; background: var(--color-primary); color: #fff; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .prose-bb ol.steps { counter-reset: step; list-style: none; padding-left: 0; }
 .prose-bb ol.steps > li { counter-increment: step; position: relative; padding-left: 2.75rem; margin: 0.9rem 0; }
 .prose-bb ol.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0.1rem; width: 2rem; height: 2rem; border-radius: 9999px; background: var(--color-primary); color: #fff; font-weight: 700; font-size: 0.875rem; display: flex; align-items: center; justify-content: center; }
