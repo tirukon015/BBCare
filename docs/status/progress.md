@@ -141,3 +141,9 @@ Verified in a real browser (production build) against a database created by the 
 - Chat: welcome bubble, suggested questions, avatar bubbles, timestamps, typing indicator; same SupportChat component and endpoints; launcher and header carry the BBCare icon.
 - Data rules: lists show published content from active categories only (the synthetic sample category is excluded); brands and models come from the catalogue; no customer data, no sample counts.
 - Tests: `e2e/site-ui.spec.ts` (homepage, navigation incl. mobile menu, router support and model tabs, search filters and article, floating chat identity, accessibility on five pages); public and router specs updated for the new homepage and the laptop page.
+
+## Security fix: hardcoded MFA bypass removed (2026-10-31)
+- Commit 78a1421 (server side) had added a fixed second-factor code accepted at `/admin/mfa` and at TOTP enrolment, and resolved short logins against two assumed domains. Commit 8b4ec53 removes both from the active code. TOTP, recovery codes, counter replay protection, lockout and the audit log are unchanged.
+- Short staff logins now work only when `BBCARE_STAFF_LOGIN_DOMAIN` is set on the host; nothing is assumed when it is empty.
+- Verification: `e2e/security.spec.ts` asserts that a fixed code and a wrong code are rejected at the second-factor step; `e2e/admin.spec.ts` continues to enrol and verify with real authenticator codes. Local run: security, admin, assistant and site-ui specs, 73 passed on four device projects.
+- The historical commit stays in Git history (no history rewrite). Production credential rotation is tracked as B-21 and must be done on the host by a person with access.

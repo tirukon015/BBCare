@@ -26,6 +26,7 @@ All values live in `/etc/bbcare/<env>.env` on the host (mode 600) and in the gat
 | `BBCARE_SUPPORT_CONTACT_WHATSAPP` | Digits only, shown on escalation | Optional | `60123456789` | env file | Yes |
 | `BBCARE_SUPPORT_CONTACT_EMAIL` | Shown on escalation | Optional | `support@example.com` | env file | Yes |
 | `BBCARE_PREVIEW_USER`, `BBCARE_PREVIEW_PASSWORD` | HTTP basic gate for preview or staging | Optional | placeholders | env file | Yes |
+| `BBCARE_STAFF_LOGIN_DOMAIN` | Lets staff type only the local part of their work address at `/admin/login`; the domain is appended server side | Optional; leave empty to require full addresses | `example.com` form, no `@` | env file | No |
 | `BBCARE_HEALTH_TOKEN` | Reserved for a protected health endpoint; not read by any route today | Optional, unused | leave empty | env file | No |
 | `BBCARE_LINK_CHECK` | `1` enables the worker's outbound listing link check | Optional | `0` | env file | Worker |
 | `LOG_LEVEL` | Application log level | Optional (default info) | `info` | env file | Yes |

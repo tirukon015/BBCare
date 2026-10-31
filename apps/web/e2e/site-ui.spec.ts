@@ -20,11 +20,12 @@ test.describe("customer website UI", () => {
     await expectNoHorizontalScroll(page);
   });
 
-  test("navigation: five sections, search, AI entry, mobile menu", async ({ page }, info) => {
+  test("navigation: five sections, search, AI entry, mobile menu", async ({ page }) => {
     await page.goto("/en/troubleshooting");
     await acceptEssentialOnly(page);
     await expect(page.getByRole("heading", { level: 1, name: "Troubleshooting" })).toBeVisible();
-    if (info.project.name === "desktop-chrome") {
+    // The header switches to the full navigation at the lg breakpoint (1024px); choose by viewport, not by project name.
+    if ((page.viewportSize()?.width ?? 0) >= 1024) {
       const nav = page.getByRole("navigation", { name: "Main" });
       for (const l of ["Home", "Laptops", "Routers", "Troubleshooting", "Guides"]) await expect(nav.getByRole("link", { name: l })).toBeVisible();
       await expect(page.getByRole("link", { name: "Search" })).toBeVisible();
